@@ -1,0 +1,923 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Ночное дежурство</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: одна колонка. Три раздела: приём (игра), клиника (стройка), банк вопросов (импорт). Пульс-линия как сквозной мотив */
+:root {
+  --bg: #e9f0ef;
+  --surface: #f9fcfb;
+  --ink: #0d2a30;
+  --muted-solid: #557074;
+  --line: #c6d8d6;
+  --accent: #0b7a78;
+  --accent-ink: #ffffff;
+  --gold: #9a6a00;
+  --gold-bg: #f6e7bf;
+  --good: #1c8a4b;
+  --good-bg: #d9f1e2;
+  --bad: #c93a43;
+  --bad-bg: #fbe0e1;
+  --font-display: "Unbounded", "Onest", system-ui, sans-serif;
+  --font-body: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a1a1e; --surface: #12292e; --ink: #e6f2f1; --muted-solid: #8fb0b3;
+    --line: #25444a; --accent: #3cc7c2; --accent-ink: #062022; --gold: #f0c35a; --gold-bg: #3a2f10;
+    --good: #52d58a; --good-bg: #123a27; --bad: #ff7077; --bad-bg: #432024; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a1a1e; --surface: #12292e; --ink: #e6f2f1; --muted-solid: #8fb0b3;
+  --line: #25444a; --accent: #3cc7c2; --accent-ink: #062022; --gold: #f0c35a; --gold-bg: #3a2f10;
+  --good: #52d58a; --good-bg: #123a27; --bad: #ff7077; --bad-bg: #432024; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(26px, 8vw, 34px); line-height: 1.1; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 500; line-height: 1.3; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-solid); }
+.pulse { width: 100%; height: 40px; display: block; }
+.pulse path { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 500 14px var(--font-body); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer; min-height: 40px; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn { font: 600 16px var(--font-body); background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 13px 16px; cursor: pointer; min-height: 48px; width: 100%; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn.small { font-size: 14px; min-height: 42px; padding: 9px 12px; }
+.btn[disabled] { opacity: .45; cursor: default; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.note { font-size: 12px; color: var(--muted-solid); }
+.rules { margin: 0; padding-left: 18px; color: var(--muted-solid); font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+
+/* шапка прогресса */
+.top { display: flex; flex-direction: column; gap: 8px; }
+.toprow { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.lvl { font-family: var(--font-display); font-size: 15px; font-weight: 500; min-width: 0; }
+.money { font-family: var(--font-mono); font-weight: 700; font-size: 18px; color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left; }
+.bar.low > i { background: var(--bad); }
+.nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: var(--line); padding: 4px; border-radius: 10px; }
+.nav button { font: 600 14px var(--font-body); color: var(--ink); background: transparent; border: 0; border-radius: 7px; padding: 10px 4px; min-height: 44px; cursor: pointer; }
+.nav button[aria-current="true"] { background: var(--surface); }
+
+/* игра */
+.hud { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.lives { display: flex; gap: 4px; flex-wrap: wrap; }
+.lives svg { width: 24px; height: 24px; transition: opacity .2s, transform .2s; }
+.lives .lost { opacity: 0.22; transform: scale(0.85); }
+.score { font-family: var(--font-mono); font-weight: 700; font-size: 18px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.streak { font-family: var(--font-mono); font-size: 13px; color: var(--accent); min-width: 0; }
+.qmeta { display: flex; justify-content: space-between; gap: 8px; }
+.qtext { font-size: 19px; font-weight: 600; line-height: 1.35; margin: 0; overflow-wrap: anywhere; }
+.opts { display: flex; flex-direction: column; gap: 10px; }
+.opt { display: flex; gap: 12px; align-items: flex-start; text-align: left; font: 500 16px/1.35 var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 13px 14px; cursor: pointer; min-height: 52px; width: 100%; }
+.opt .k { font-family: var(--font-mono); font-size: 13px; color: var(--muted-solid); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; flex: none; margin-top: 1px; }
+.opt span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.opt.good { background: var(--good-bg); border-color: var(--good); }
+.opt.bad { background: var(--bad-bg); border-color: var(--bad); }
+.opt.off { opacity: .3; }
+.opt[disabled] { cursor: default; }
+.fb { border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.fb.good { background: var(--good-bg); }
+.fb.bad { background: var(--bad-bg); }
+.fb b { font-family: var(--font-display); font-weight: 500; font-size: 14px; }
+.big { font-family: var(--font-display); font-weight: 700; font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--gold); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat b { font-family: var(--font-mono); font-size: 18px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted-solid); }
+.topics { display: flex; flex-direction: column; gap: 10px; }
+.topic { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 14px; }
+.topic span { min-width: 0; overflow-wrap: anywhere; }
+.topic .bar { grid-column: 1 / -1; }
+.topic em { font-style: normal; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.up { background: var(--gold-bg); border-radius: 8px; padding: 12px 14px; font-size: 15px; }
+.up b { font-family: var(--font-display); font-weight: 500; }
+
+/* клиника */
+.plan { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.cell { aspect-ratio: 1; border: 1px dashed var(--line); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 12px; color: var(--muted-solid); }
+.cell.on { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.rooms { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.room { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.room.locked { opacity: .6; }
+.rhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.pips { display: flex; gap: 4px; padding-top: 3px; }
+.pip { width: 14px; height: 6px; border-radius: 3px; background: var(--line); }
+.pip.on { background: var(--accent); }
+.rline { font-size: 14px; color: var(--muted-solid); overflow-wrap: anywhere; }
+.collect { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.collect .big { font-size: 26px; }
+input[type="text"], textarea { font: 400 15px var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; width: 100%; }
+textarea { min-height: 150px; font-family: var(--font-mono); font-size: 13px; resize: vertical; }
+pre { margin: 0; font: 12px/1.5 var(--font-mono); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; }
+.msg { font-size: 14px; }
+/* схема клиники */
+:root {
+  --sky: #d3e4e2; --shell: #7da3a6; --wall: #f4f9f8; --floor: #bcd3d0; --floor2: #d6e5e3;
+  --furn: #8fb0b3; --furn2: #5f8488; --coat: #ffffff; --skin: #e2b996; --ground: #9fb8b4;
+  --screen: #0b1f24; --ecg: #52d58a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sky: #0d2226; --shell: #3d6a70; --wall: #183a40; --floor: #0e2a2f; --floor2: #102f35;
+    --furn: #4d7a80; --furn2: #335a60; --coat: #dcefed; --skin: #c99c78; --ground: #0a1b1f;
+  }
+}
+:root[data-theme="dark"] {
+  --sky: #0d2226; --shell: #3d6a70; --wall: #183a40; --floor: #0e2a2f; --floor2: #102f35;
+  --furn: #4d7a80; --furn2: #335a60; --coat: #dcefed; --skin: #c99c78; --ground: #0a1b1f;
+}
+.art { padding: 8px; }
+.clinic-art { width: 100%; height: auto; display: block; border-radius: 8px; }
+.f-sky { fill: var(--sky); } .f-shell { fill: var(--shell); } .f-wall { fill: var(--wall); }
+.f-floor { fill: var(--floor); } .f-floor2 { fill: var(--floor2); } .f-furn { fill: var(--furn); }
+.f-furn2 { fill: var(--furn2); } .f-coat { fill: var(--coat); } .f-skin { fill: var(--skin); }
+.f-ground { fill: var(--ground); } .f-screen { fill: var(--screen); }
+.f-acc { fill: var(--accent); } .f-gold { fill: var(--gold); } .f-bad { fill: var(--bad); } .f-good { fill: var(--good); }
+.f-ink { fill: var(--accent-ink); }
+.ghost { fill: none; stroke: var(--furn); stroke-width: 1; opacity: .8; }
+.t-label { fill: var(--muted-solid); font-family: var(--font-mono); }
+.t-ink { fill: var(--accent-ink); font-family: var(--font-display); font-weight: 500; }
+.t-ecg { fill: var(--ecg); font-family: var(--font-mono); }
+.line { fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.s-furn { stroke: var(--furn); } .s-furn2 { stroke: var(--furn2); } .s-acc { stroke: var(--accent); }
+.ecg { fill: none; stroke: var(--ecg); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 14 4; vector-effect: non-scaling-stroke; }
+.cone { opacity: .16; }
+@media (prefers-reduced-motion: no-preference) {
+  .bob { animation: bob 2.4s ease-in-out infinite; }
+  .blink { animation: blink 1.6s ease-in-out infinite; }
+  .ecg { animation: dash 1s linear infinite; }
+  .drip { animation: drip 1.4s ease-in infinite; }
+  .walk { animation: walk 8s ease-in-out infinite alternate; }
+  .walkv { animation: walkv 12s ease-in-out infinite alternate; }
+  .flash { opacity: 0; animation: flash 3.2s linear infinite; }
+  .slide { animation: slide 5s ease-in-out infinite alternate; }
+  .sway { transform-box: fill-box; transform-origin: top center; animation: sway 3s ease-in-out infinite alternate; }
+  .drive { animation: drive 18s linear infinite; }
+  .glow { animation: glow 2.6s ease-in-out infinite; }
+  .spin { transform-box: fill-box; transform-origin: center; animation: spin 1.2s linear infinite; }
+}
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+@keyframes dash { to { stroke-dashoffset: -18; } }
+@keyframes drip { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(14px); opacity: 0; } }
+@keyframes walk { from { transform: translateX(0); } to { transform: translateX(70px); } }
+@keyframes walkv { from { transform: translateY(0); } to { transform: translateY(-400px); } }
+@keyframes flash { 0%, 88%, 100% { opacity: 0; } 93% { opacity: .85; } }
+@keyframes slide { from { transform: translateX(0); } to { transform: translateX(14px); } }
+@keyframes sway { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+@keyframes drive { from { transform: translateX(-50px); } to { transform: translateX(410px); } }
+@keyframes glow { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<div class="wrap" id="app"></div>
+
+<script>
+/* ===== Встроенные вопросы: категория, вопрос, [верный, неверные...], пояснение ===== */
+var BASE = [
+ ["Кардиология","Какой препарат применяют для купирования приступа стенокардии?",["Нитроглицерин под язык","Амлодипин внутрь","Эналаприл внутрь","Фуросемид внутрь"],"Нитроглицерин расширяет венозное русло и коронарные сосуды, действие наступает через 1–3 минуты."],
+ ["Кардиология","Какой ЭКГ-признак характерен для острого трансмурального инфаркта миокарда?",["Подъём сегмента ST в соответствующих отведениях","Удлинение интервала PQ более 0,2 с","Дельта-волна и уширение QRS","Отсутствие зубца P и волны f"],"Подъём ST отражает острое повреждение стенки миокарда. Остальные варианты описывают АВ-блокаду, синдром WPW и фибрилляцию предсердий."],
+ ["Кардиология","Какой лабораторный маркер наиболее специфичен для некроза миокарда?",["Тропонин","АЛТ","Креатинин","Амилаза"],"Сердечные тропонины I и T повышаются через 2–4 часа после начала повреждения кардиомиоцитов."],
+ ["Кардиология","Для какого состояния характерна триада Бека: падение АД, набухание шейных вен, глухие тоны сердца?",["Тампонада сердца","Тромбоэмболия лёгочной артерии","Напряжённый пневмоторакс","Расслоение аорты"],"Триада Бека возникает при накоплении жидкости или крови в полости перикарда."],
+ ["Кардиология","Что чаще всего служит источником тромбоэмболии лёгочной артерии?",["Глубокие вены нижних конечностей","Левый желудочек","Почечные артерии","Воротная вена"],"Тромбы из глубоких вен голеней, бедра и таза с током крови попадают в правые отделы сердца и лёгочные артерии."],
+ ["Неотложная помощь","Какое соотношение компрессий грудной клетки и вдохов при сердечно-лёгочной реанимации у взрослого?",["30:2","15:2","5:1","10:2"],"Для взрослого при одном или двух спасателях применяют 30 компрессий и 2 вдоха."],
+ ["Неотложная помощь","Какова рекомендуемая частота компрессий грудной клетки при СЛР у взрослого?",["100–120 в минуту","60–80 в минуту","80–100 в минуту","140–160 в минуту"],"Глубина компрессий 5–6 см, с полным расправлением грудной клетки после каждого нажатия."],
+ ["Неотложная помощь","Какой препарат вводят в первую очередь при анафилактическом шоке?",["Адреналин внутримышечно","Преднизолон внутривенно","Хлоропирамин внутримышечно","Эуфиллин внутривенно"],"Адреналин в/м в латеральную часть бедра — препарат выбора. Антигистаминные и глюкокортикоиды вторичны."],
+ ["Неотложная помощь","Что делают при артериальном кровотечении из бедренной артерии?",["Накладывают жгут выше раны","Накладывают жгут ниже раны","Прикладывают грелку","Накладывают шину без остановки кровотечения"],"Жгут накладывают проксимальнее раны, фиксируют время наложения."],
+ ["Неотложная помощь","Какой максимальный балл по шкале комы Глазго?",["15","10","12","20"],"Шкала оценивает открывание глаз, речевую и двигательную реакции: от 3 до 15 баллов."],
+ ["Неотложная помощь","Что означает буква F в акрониме FAST при подозрении на инсульт?",["Face — асимметрия лица","Fever — лихорадка","Fall — падение","Fluid — отёки"],"F — Face, A — Arms, S — Speech, T — Time: время обращения за помощью."],
+ ["Неотложная помощь","Что вводят при гипогликемической коме?",["40% раствор глюкозы внутривенно","Инсулин короткого действия","Физиологический раствор","Фуросемид"],"При тяжёлой гипогликемии с потерей сознания вводят глюкозу в/в, затем контролируют гликемию."],
+ ["Неотложная помощь","Какая манипуляция показана при напряжённом пневмотораксе?",["Декомпрессия плевральной полости пункцией","Дренирование брюшной полости","Пункция перикарда","Только оксигенотерапия через маску"],"Воздух выпускают пункцией плевральной полости, затем устанавливают дренаж."],
+ ["Неотложная помощь","Какова нормальная сатурация кислорода SpO₂ у здорового взрослого?",["95–100%","85–88%","89–91%","75–80%"],"Значения ниже 94–95% требуют оценки состояния и поиска причины."],
+ ["Пульмонология","Какой препарат применяют для купирования приступа бронхиальной астмы?",["Сальбутамол ингаляционно","Амброксол","Кодеин","Амоксициллин"],"Короткодействующий β₂-агонист быстро расширяет бронхи."],
+ ["Пульмонология","Какой аускультативный признак типичен для крупозной пневмонии?",["Крепитация","Сухие свистящие хрипы по всем полям","Амфорическое дыхание","Ослабленное дыхание с шумом трения плевры"],"В стадии прилива и разрешения над очагом воспаления выслушивается крепитация."],
+ ["Пульмонология","Какой метод применяют для раннего выявления туберкулёза у взрослых при профилактических осмотрах?",["Флюорография","Проба Манту","Общий анализ крови","Спирометрия"],"Проба Манту используется преимущественно у детей, у взрослых — лучевое обследование."],
+ ["Пульмонология","Какова нормальная частота дыхания у взрослого в покое?",["16–20 в минуту","6–8 в минуту","24–30 в минуту","35–40 в минуту"],"ЧДД более 20 в минуту называют тахипноэ."],
+ ["Хирургия","Симптом Щёткина — Блюмберга свидетельствует о…",["Раздражении брюшины","Остром панкреатите","Почечной колике","Кишечной непроходимости"],"Боль усиливается при резком отнятии руки после надавливания на переднюю брюшную стенку."],
+ ["Хирургия","Где расположена точка Мак-Бернея?",["На границе наружной и средней трети линии от пупка до передней верхней ости правой подвздошной кости","В середине линии от пупка до передней верхней ости левой подвздошной кости","Под правой рёберной дугой","На 2 см ниже пупка по срединной линии"],"Болезненность в этой точке типична для острого аппендицита."],
+ ["Хирургия","Какие симптомы входят в триаду Шарко при остром холангите?",["Лихорадка с ознобом, боль в правом подреберье, желтуха","Рвота, диарея, судороги","Одышка, кашель, кровохарканье","Отёки, протеинурия, гипертензия"],"При добавлении гипотонии и спутанности сознания говорят о пентаде Рейнольдса."],
+ ["Инфекции","Какой путь передачи характерен для гепатита А?",["Фекально-оральный","Парентеральный","Трансмиссивный","Аэрозольный"],"Заражение происходит через загрязнённые воду, пищу и руки."],
+ ["Инфекции","Какая сыпь характерна для менингококкцемии?",["Геморрагическая звёздчатая","Розеолёзная на животе","Пятнисто-папулёзная этапная","Везикулёзная с прозрачным содержимым"],"Появление геморрагической сыпи с лихорадкой требует немедленной госпитализации."],
+ ["Инфекции","Сколько по рекомендациям ВОЗ длится гигиеническая обработка рук спиртосодержащим антисептиком?",["20–30 секунд","3–5 секунд","1–2 минуты","5 минут"],"Мытьё рук водой с мылом занимает 40–60 секунд."],
+ ["Педиатрия","К какому возрасту обычно закрывается большой родничок?",["К 12–18 месяцам","К 3 месяцам","К 6 месяцам","К 3 годам"],"Преждевременное или позднее закрытие требует оценки педиатром."],
+ ["Педиатрия","Когда новорождённому проводят первую вакцинацию против гепатита В?",["В течение первых 24 часов жизни","На 3 месяце","В 1 год","В 6 лет"],"Вакцинация в роддоме предотвращает вертикальную передачу вируса."],
+ ["Акушерство","Какова средняя продолжительность нормальной беременности?",["280 дней (40 недель)","240 дней","320 дней","200 дней"],"Роды в срок: 37–42 полные недели."],
+ ["Акушерство","Какие симптомы составляют классическую триаду гестоза (преэклампсии)?",["Артериальная гипертензия, протеинурия, отёки","Лихорадка, боль, желтуха","Одышка, кашель, боль в груди","Тошнота, рвота, потеря массы тела"],"Тяжёлая преэклампсия может осложниться эклампсией, поэтому требует неотложной помощи."],
+ ["Фармакология","Какой антидот применяют при передозировке опиоидов?",["Налоксон","Флумазенил","Протамина сульфат","Ацетилцистеин"],"Налоксон — антагонист опиоидных рецепторов."],
+ ["Фармакология","Какой антидот применяют при передозировке гепарина?",["Протамина сульфат","Витамин К","Налоксон","Атропин"],"Протамин связывает гепарин и нейтрализует его действие."],
+ ["Фармакология","Какой типичный побочный эффект ингибиторов АПФ?",["Сухой кашель","Брадикардия","Гипокалиемия","Запоры"],"При непереносимости назначают блокаторы рецепторов ангиотензина II."],
+ ["Фармакология","Какой антидот применяют при отравлении парацетамолом?",["Ацетилцистеин","Налоксон","Атропин","Флумазенил"],"Ацетилцистеин восполняет глутатион и защищает печень."],
+ ["Терапия","Какое значение глюкозы венозной плазмы натощак соответствует диагностическому критерию сахарного диабета?",["7,0 ммоль/л и выше","5,5 ммоль/л","6,1 ммоль/л","3,5 ммоль/л"],"Для диагностики значение подтверждают повторным измерением при отсутствии симптомов."],
+ ["Терапия","Какие изменения эритроцитов характерны для железодефицитной анемии?",["Гипохромия и микроцитоз","Гиперхромия и макроцитоз","Нормохромия и ретикулоцитоз","Сфероцитоз"],"Снижен цветовой показатель и средний объём эритроцита."]
+].map(function(r){ return { c: r[0], q: r[1], a: r[2], e: r[3] }; });
+
+/* ===== Уровни ===== */
+var LV = [0,100,250,450,700,1000,1400,1900,2500,3200];
+var TITLES = ["Интерн","Ординатор","Врач-стажёр","Участковый врач","Врач скорой помощи","Заведующий отделением","Заместитель главврача","Главный врач","Директор медцентра","Основатель сети клиник"];
+function levelOf(xp){ var l = 1; for (var i=0;i<LV.length;i++){ if (xp >= LV[i]) l = i+1; } return l; }
+
+/* ===== Клиника: комнаты, оборудование по уровням, доход в час и бонусы ===== */
+var ROOMS = [
+ { id:"reg",   ab:"РЕГ", name:"Регистратура",        min:1, tiers:[["Стойка и картотека",0],["Электронная запись",300],["Колл-центр",1200]], inc:[20,40,70],      perk:{t:"money", v:[3,6,10],  txt:"к деньгам за ответы"} },
+ { id:"ther",  ab:"ТЕР", name:"Кабинет терапевта",   min:1, tiers:[["Тонометр и фонендоскоп",400],["Пульсоксиметр и ЭКГ",1000],["Кардиомонитор",2500]], inc:[50,100,180] },
+ { id:"proc",  ab:"ПРО", name:"Процедурный кабинет", min:2, tiers:[["Кушетка и стерилизатор",900],["Инфузомат",1800],["Дефибриллятор",3500]], inc:[70,130,230] },
+ { id:"lab",   ab:"ЛАБ", name:"Лаборатория",         min:3, tiers:[["Центрифуга",2200],["Биохимический анализатор",4500],["ПЦР-модуль",8000]], inc:[90,170,300], perk:{t:"hint", v:[1,2,3], txt:"подсказок 50/50 за смену"} },
+ { id:"pharm", ab:"АПТ", name:"Аптека",              min:3, tiers:[["Витрина",1500],["Склад",3000],["Автоматизированный учёт",5500]], inc:[60,110,200], perk:{t:"time", v:[2,4,6], txt:"сек. к таймеру вопроса"} },
+ { id:"us",    ab:"УЗИ", name:"Кабинет УЗИ",         min:4, tiers:[["УЗИ-аппарат",4000],["Допплер",7000],["Аппарат экспертного класса",12000]], inc:[120,220,380] },
+ { id:"xray",  ab:"РЕН", name:"Рентген",             min:5, tiers:[["Рентген-аппарат",7000],["Цифровой детектор",12000],["Компьютерный томограф",24000]], inc:[200,360,650] },
+ { id:"ward",  ab:"СТА", name:"Стационар",           min:6, tiers:[["Две койки",9000],["Пост медсестры",14000],["Палата на 8 коек",22000]], inc:[260,450,800] },
+ { id:"icu",   ab:"РЕА", name:"Реанимация",          min:7, tiers:[["Монитор и аппарат ИВЛ",15000],["Блок на 4 места",26000],["Отделение с круглосуточным постом",42000]], inc:[300,520,900], perk:{t:"life", v:[1,1,2], txt:"к числу жизней"} },
+ { id:"op",    ab:"ОПЕ", name:"Операционная",        min:8, tiers:[["Операционный стол",25000],["Лапароскопическая стойка",40000],["Роботизированный комплекс",70000]], inc:[500,900,1600], perk:{t:"money", v:[5,10,15], txt:"к деньгам за ответы"} }
+];
+var CAP_H = 8;
+
+/* ===== Сохранение ===== */
+var SAVE_KEY = "duty-save-v2", BANK_KEY = "duty-bank-v2";
+function newSave(){ return { money: 250, xp: 0, rooms: { reg: 1 }, last: Date.now(), name: "Городская клиника", best: 0 }; }
+var S;
+function load(){
+  try { var raw = localStorage.getItem(SAVE_KEY); if (raw){ var o = JSON.parse(raw); var d = newSave(); for (var k in d){ if (o[k] === undefined) o[k] = d[k]; } return o; } } catch(e){}
+  return newSave();
+}
+function save(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch(e){} }
+var CUSTOM = [];
+function loadBank(){ try { var raw = localStorage.getItem(BANK_KEY); if (raw) return JSON.parse(raw) || []; } catch(e){} return []; }
+function saveBank(){ try { localStorage.setItem(BANK_KEY, JSON.stringify(CUSTOM)); return true; } catch(e){ return false; } }
+S = load(); CUSTOM = loadBank();
+
+/* ===== Вспомогательное ===== */
+var app = document.getElementById("app");
+var view = "play", cat = "Все", st = null, timer = null, ticker = null, flash = "";
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function fmt(n){ return Math.round(n).toLocaleString("ru-RU"); }
+function shuffle(a){ a = a.slice(); for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function pool(){ return BASE.concat(CUSTOM); }
+function cats(){ var s = ["Все"]; pool().forEach(function(q){ if (s.indexOf(q.c)<0) s.push(q.c); }); return s; }
+function tier(id){ return S.rooms[id] || 0; }
+function perk(type){ var sum = 0; ROOMS.forEach(function(r){ var t = tier(r.id); if (t>0 && r.perk && r.perk.t===type) sum += r.perk.v[t-1]; }); return sum; }
+function incomeH(){ var s = 0; ROOMS.forEach(function(r){ var t = tier(r.id); if (t>0) s += r.inc[t-1]; }); return s; }
+function pending(){ var h = Math.min(CAP_H, (Date.now() - S.last)/3600000); return Math.floor(incomeH() * Math.max(0,h)); }
+var PULSE = '<svg class="pulse" viewBox="0 0 560 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 22 H150 L162 22 L172 7 L184 37 L196 13 L204 22 H330 L342 22 L352 9 L364 35 L376 15 L384 22 H560"/></svg>';
+function heart(lost){ return '<svg class="'+(lost?'lost':'')+'" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--bad)" d="M12 21s-7.5-4.6-9.6-9.1C1 8.9 2.7 5.5 6 5.5c2.1 0 3.4 1.1 4.2 2.3L12 10l1.8-2.2c.8-1.2 2.1-2.3 4.2-2.3 3.3 0 5 3.4 3.6 6.4C19.5 16.4 12 21 12 21z"/></svg>'; }
+
+function topBar(){
+  var l = levelOf(S.xp), cur = LV[l-1], next = LV[l];
+  var frac = next ? (S.xp - cur)/(next - cur) : 1;
+  var xpTxt = next ? (S.xp - cur)+' / '+(next-cur)+' опыта' : 'максимальный уровень';
+  return '<div class="top"><div class="toprow"><span class="lvl">Ур. '+l+' · '+TITLES[l-1]+'</span><span class="money">'+fmt(S.money)+' ₽</span></div>' +
+    '<div class="bar"><i style="transform:scaleX('+frac+')"></i></div><div class="note">'+xpTxt+'</div></div>';
+}
+function navBar(){
+  var items = [["play","Приём"],["clinic","Клиника"],["bank","Вопросы"]];
+  return '<div class="nav" id="nav">'+items.map(function(i){ return '<button data-v="'+i[0]+'" aria-current="'+(view===i[0])+'">'+i[1]+'</button>'; }).join("")+'</div>';
+}
+function shell(inner){
+  stop3d(); clearInterval(ticker); ticker = null;
+  app.innerHTML = '<div><p class="eyebrow">'+esc(S.name)+'</p></div>' + topBar() + navBar() + inner;
+  document.getElementById("nav").onclick = function(e){ var v = e.target.getAttribute && e.target.getAttribute("data-v"); if (v){ view = v; flash = ""; render(); } };
+}
+function render(){ clearInterval(timer); if (view==="clinic") clinic(); else if (view==="bank") bank(); else home(); }
+
+/* ===== Приём: старт ===== */
+function home(){
+  var p = pool(), lives = 3 + perk("life"), secs = 30 + perk("time"), hints = perk("hint");
+  var chips = cats().map(function(c){ return '<button class="chip" aria-pressed="'+(c===cat)+'" data-cat="'+esc(c)+'">'+esc(c)+'</button>'; }).join("");
+  shell(
+    PULSE +
+    '<div class="panel"><p class="eyebrow">Раздел · вопросов в банке: '+p.length+'</p><div class="chips" id="chips">'+chips+'</div>' +
+    '<button class="btn" id="go">Начать смену</button>' +
+    '<p class="note">Лучшая смена: '+fmt(S.best)+' ₽ за один приём</p></div>' +
+    '<ul class="rules"><li>10 вопросов. Жизней: '+lives+', на вопрос '+secs+' секунд'+(hints?', подсказок 50/50: '+hints:'')+'</li><li>Верный ответ даёт деньги и опыт, серия из 3 ответов подряд ×1,5, из 5 ×2</li><li>Деньги идут на оборудование клиники во вкладке «Клиника»</li><li>Клавиши 1–4 выбирают вариант ответа</li></ul>' +
+    '<p class="note">Встроенные вопросы составлены для самоподготовки и не взяты из официального банка тестов. Свои вопросы можно загрузить во вкладке «Вопросы». Прогресс хранится в браузере на этом устройстве.</p>'
+  );
+  document.getElementById("chips").onclick = function(e){ var c = e.target.getAttribute && e.target.getAttribute("data-cat"); if (c){ cat = c; home(); } };
+  document.getElementById("go").onclick = start;
+}
+
+/* ===== Игровая смена ===== */
+function start(){
+  var p = pool().filter(function(q){ return cat==="Все" || q.c===cat; });
+  if (!p.length){ cat = "Все"; p = pool(); }
+  var qs = shuffle(p).slice(0, 10);
+  var lives = 3 + perk("life");
+  st = { qs: qs, i: 0, lives: lives, maxLives: lives, earned: 0, xpGain: 0, streak: 0, ok: 0, per: {}, t0: 0, dur: 30 + perk("time"), hints: perk("hint"), lvlBefore: levelOf(S.xp), answered: false, opts: [] };
+  question();
+}
+function hud(){
+  var h = ""; for (var k=0;k<st.maxLives;k++) h += heart(k >= st.lives);
+  var mult = st.streak>=5 ? "×2" : st.streak>=3 ? "×1,5" : "";
+  return '<div class="hud"><div class="lives" id="lives" aria-label="Жизней: '+st.lives+'">'+h+'</div>' +
+    '<div class="streak">'+(st.streak ? 'серия '+st.streak+(mult?' · '+mult:'') : '')+'</div>' +
+    '<div class="score" id="score">+'+fmt(st.earned)+' ₽</div></div>';
+}
+function question(){
+  stop3d();
+  var q = st.qs[st.i];
+  st.opts = shuffle(q.a); st.answered = false; st.t0 = Date.now();
+  var o = st.opts.map(function(t,idx){ return '<button class="opt" data-i="'+idx+'"><span class="k">'+(idx+1)+'</span><span>'+esc(t)+'</span></button>'; }).join("");
+  var canHint = st.hints > 0 && st.opts.length >= 3;
+  app.innerHTML = hud() +
+    '<div class="bar" id="bar"><i id="fill"></i></div>' +
+    '<div class="qmeta"><span class="eyebrow">'+esc(q.c)+'</span><span class="eyebrow">'+(st.i+1)+' / '+st.qs.length+'</span></div>' +
+    '<h2 class="qtext">'+esc(q.q)+'</h2>' +
+    '<div class="opts" id="opts">'+o+'</div><div id="after">' +
+    (canHint ? '<button class="btn ghost small" id="hint">Подсказка 50/50 (осталось '+st.hints+')</button>' : '') + '</div>';
+  document.getElementById("opts").onclick = function(e){ var b = e.target.closest(".opt"); if (b && !b.disabled) answer(parseInt(b.getAttribute("data-i"),10)); };
+  var hb = document.getElementById("hint"); if (hb) hb.onclick = useHint;
+  clearInterval(timer);
+  timer = setInterval(tick, 100);
+}
+function useHint(){
+  if (st.answered || st.hints<=0) return;
+  var right = st.qs[st.i].a[0], wrong = [];
+  st.opts.forEach(function(t,i){ if (t!==right) wrong.push(i); });
+  var kill = shuffle(wrong).slice(0, Math.min(2, wrong.length-1));
+  var btns = document.querySelectorAll(".opt");
+  kill.forEach(function(i){ btns[i].disabled = true; btns[i].classList.add("off"); });
+  st.hints--;
+  document.getElementById("after").innerHTML = "";
+}
+function tick(){
+  var left = Math.max(0, st.dur - (Date.now() - st.t0)/1000);
+  var f = document.getElementById("fill"), bar = document.getElementById("bar");
+  if (f) f.style.transform = "scaleX("+(left/st.dur)+")";
+  if (bar) bar.classList.toggle("low", left < 8);
+  if (left <= 0) answer(-1);
+}
+function answer(idx){
+  if (st.answered) return;
+  st.answered = true; clearInterval(timer);
+  var q = st.qs[st.i], right = q.a[0];
+  var secs = (Date.now() - st.t0)/1000;
+  var isOk = idx>=0 && st.opts[idx] === right;
+  st.per[q.c] = st.per[q.c] || [0,0]; st.per[q.c][1]++;
+  var gain = 0;
+  if (isOk){
+    st.ok++; st.per[q.c][0]++; st.streak++;
+    var base = 40 + Math.round(Math.max(0, 1 - secs/st.dur) * 20);
+    var m = (st.streak>=5 ? 2 : st.streak>=3 ? 1.5 : 1) * (1 + perk("money")/100);
+    gain = Math.round(base*m); st.earned += gain; st.xpGain += 10;
+    S.money += gain; S.xp += 10;
+  } else { st.streak = 0; st.lives--; }
+  save();
+  document.querySelectorAll(".opt").forEach(function(b,i){ b.disabled = true; if (st.opts[i]===right) b.classList.add("good"); else if (i===idx) b.classList.add("bad"); });
+  var over = st.lives<=0, last = st.i >= st.qs.length-1;
+  var head = isOk ? "Верно, +"+gain+" ₽" : (idx<0 ? "Время вышло" : "Неверно");
+  var body = (isOk ? "" : "<p>Правильный ответ: "+esc(right)+"</p>") + (q.e ? "<p>"+esc(q.e)+"</p>" : "");
+  document.getElementById("after").innerHTML =
+    '<div class="fb '+(isOk?'good':'bad')+'"><b>'+head+'</b>'+body+'</div>' +
+    '<button class="btn" id="next" style="margin-top:12px">'+((over||last)?'Итоги смены':'Следующий вопрос')+'</button>';
+  var n = document.getElementById("next");
+  n.onclick = function(){ if (over||last) finish(); else { st.i++; question(); } };
+  n.focus();
+  var h = ""; for (var k=0;k<st.maxLives;k++) h += heart(k >= st.lives);
+  document.getElementById("lives").innerHTML = h;
+  document.getElementById("score").textContent = "+"+fmt(st.earned)+" ₽";
+}
+function finish(){
+  clearInterval(timer);
+  var total = st.i + 1;
+  if (st.lives > 0){ st.xpGain += 20; S.xp += 20; }
+  if (st.earned > S.best) S.best = st.earned;
+  save();
+  var lAfter = levelOf(S.xp), up = "";
+  if (lAfter > st.lvlBefore){
+    var opened = ROOMS.filter(function(r){ return r.min > st.lvlBefore && r.min <= lAfter; }).map(function(r){ return r.name; });
+    up = '<div class="up"><b>Новый уровень: '+lAfter+' · '+TITLES[lAfter-1]+'</b>' + (opened.length ? '<p>Можно построить: '+opened.join(", ")+'</p>' : '') + '</div>';
+  }
+  var title = st.lives<=0 ? "Смена прервана" : "Смена закончена";
+  var topics = Object.keys(st.per).map(function(c){
+    var a = st.per[c], p = a[0]/a[1];
+    return '<div class="topic"><span>'+esc(c)+'</span><em>'+a[0]+' из '+a[1]+'</em><div class="bar"><i style="transform:scaleX('+p+')"></i></div></div>';
+  }).join("");
+  view = "play";
+  shell(
+    '<p class="eyebrow">'+title+'</p>' + PULSE + up +
+    '<div class="panel"><div class="big">+'+fmt(st.earned)+' ₽</div><p class="note">Опыт за смену: +'+st.xpGain+'</p>' +
+    '<div class="stats"><div class="stat"><b>'+st.ok+' / '+total+'</b><span>верных ответов</span></div><div class="stat"><b>'+st.lives+'</b><span>жизней осталось</span></div><div class="stat"><b>'+Math.round(st.ok/total*100)+'%</b><span>точность</span></div></div></div>' +
+    '<div class="panel"><p class="eyebrow">Результат по темам</p><div class="topics">'+topics+'</div></div>' +
+    '<button class="btn" id="again">Новая смена</button><button class="btn ghost" id="toclinic">В клинику</button>'
+  );
+  document.getElementById("again").onclick = start;
+  document.getElementById("toclinic").onclick = function(){ view = "clinic"; render(); };
+}
+document.addEventListener("keydown", function(e){
+  if (!st || st.answered || !document.getElementById("opts")) return;
+  var n = parseInt(e.key,10);
+  if (n>=1 && n<=st.opts.length){ var b = document.querySelectorAll(".opt")[n-1]; if (b && !b.disabled) answer(n-1); }
+});
+
+/* ===== Схема клиники в разрезе ===== */
+function R(x,y,w,h,c,rx,ex){ return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" class="'+c+'"'+(rx?' rx="'+rx+'"':'')+(ex?' '+ex:'')+'/>'; }
+function C(cx,cy,r,c,ex){ return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" class="'+c+'"'+(ex?' '+ex:'')+'/>'; }
+function PL(x,y,body,anim,delay){ return '<g class="'+(anim||'')+'"'+(delay?' style="animation-delay:'+delay+'s"':'')+'>'+C(x,y-17,3.6,'f-skin')+R(x-4,y-13,8,13,body,3)+'</g>'; }
+function ECG(x,y,sc){ return '<path class="ecg" transform="translate('+x+' '+y+') scale('+(sc||1)+')" d="M0 0 h6 l2 -5 l3 9 l2 -6 l2 2 h8 l2 -5 l3 9 l2 -6 l2 2 h6"/>'; }
+function LN(d,c,ex){ return '<path d="'+d+'" class="line '+c+'"'+(ex?' '+ex:'')+'/>'; }
+function BED(x,y,w){ return R(x,y,w,6,'f-furn',2)+R(x+2,y+6,2,10,'f-furn2')+R(x+w-4,y+6,2,10,'f-furn2'); }
+function LIE(x,y,body,cls,w){ return '<g'+(cls?' class="'+cls+'"':'')+'>'+C(x+6,y-3,3.4,'f-skin')+R(x+10,y-5,w||26,5,body,2.5)+'</g>'; }
+
+var ART = {
+ reg: function(t){
+  var s = PL(49,60,'f-coat','bob');
+  if (t>=3) s += PL(70,60,'f-coat','bob',.6);
+  s += R(16,54,66,4,'f-furn',1)+R(18,58,62,18,'f-furn2')+R(34,44,14,9,'f-screen',1)+R(39,53,4,2,'f-furn');
+  if (t>=2) s += R(62,50,9,3,'f-acc blink',1);
+  if (t>=3) s += R(86,22,34,14,'f-acc blink',7)+C(96,29,1.6,'f-ink')+C(103,29,1.6,'f-ink')+C(110,29,1.6,'f-ink');
+  s += R(98,66,46,4,'f-furn',1)+PL(108,76,'f-acc','bob',.3);
+  if (t>=2) s += PL(124,76,'f-gold','bob',.9);
+  if (t>=3) s += PL(140,76,'f-acc','bob',1.2);
+  return s;
+ },
+ ther: function(t){
+  var s = PL(40,74,'f-acc','bob')+R(32,66,16,3,'f-furn2')+PL(98,58,'f-coat','bob',.5);
+  s += R(66,56,60,4,'f-furn',1)+R(70,60,52,16,'f-furn2');
+  s += R(72,52,10,4,'f-gold',1)+LN('M86 55 q4 -8 8 0','s-furn2');
+  if (t>=2) s += R(108,46,16,10,'f-furn2',2)+R(110,48,12,6,'f-screen',1)+ECG(110.5,51,.3);
+  if (t>=3) s += R(104,12,40,26,'f-furn2',3)+R(106,14,36,22,'f-screen',2)+ECG(108,25,.85)+'<text x="132" y="22" class="t-ecg" font-size="7">72</text>';
+  return s;
+ },
+ proc: function(t){
+  var s = BED(14,60,68)+LIE(14,60,'f-acc','',52)+R(116,26,26,34,'f-furn2',2)+R(119,31,20,2,'f-furn')+R(119,40,20,2,'f-furn')+PL(106,76,'f-coat','bob');
+  if (t>=2) s += LN('M92 26 V76','s-furn')+R(88,20,8,11,'f-acc',2)+C(92,36,1.4,'f-acc drip')+LN('M92 32 Q84 46 66 56','s-acc');
+  if (t>=3) s += R(112,62,26,14,'f-bad',2)+R(116,65,10,6,'f-screen',1)+C(132,67,2,'f-gold blink');
+  return s;
+ },
+ lab: function(t){
+  var s = PL(34,58,'f-coat','bob')+R(10,58,128,4,'f-furn',1)+R(14,62,120,14,'f-furn2');
+  s += R(50,57,18,1.5,'f-furn')+R(52,50,3,8,'f-bad')+R(57,50,3,8,'f-acc')+R(62,50,3,8,'f-gold');
+  s += C(96,52,7,'f-furn')+'<g class="spin"><rect x="92" y="51" width="8" height="2" class="f-gold"/></g>';
+  if (t>=2) s += R(110,34,26,24,'f-furn2',2)+R(113,38,14,8,'f-screen',1)+C(131,41,1.6,'f-good blink')+R(114,50,4,5,'f-acc')+R(120,48,4,7,'f-gold')+R(126,51,4,4,'f-bad');
+  if (t>=3) s += R(46,18,50,14,'f-screen',2)+R(50,22,8,6,'f-acc blink')+R(62,22,8,6,'f-gold blink',0,'style="animation-delay:.5s"')+R(74,22,8,6,'f-good blink',0,'style="animation-delay:1s"');
+  return s;
+ },
+ pharm: function(t){
+  var ys = t===1?[36]:t===2?[24,40]:[24,35,46], cl = ['f-acc','f-gold','f-bad','f-furn'], s = '';
+  ys.forEach(function(sy,i){ s += R(12,sy,126,2,'f-furn2'); for (var k=0;k<10;k++) s += R(14+k*12.4,sy-8,9,8,cl[(k+i)%4],1); });
+  s += PL(104,64,'f-coat','bob')+R(56,58,86,4,'f-furn',1)+R(60,62,78,14,'f-furn2')+PL(34,76,'f-acc','bob',.7);
+  if (t>=3) s += R(118,48,14,9,'f-screen',1)+R(120,52,10,1.5,'f-good blink');
+  return s;
+ },
+ us: function(t){
+  var s = BED(12,60,62)+LIE(12,60,'f-acc','',46)+PL(88,76,'f-coat','bob');
+  s += R(106,46,26,30,'f-furn2',2)+R(108,28,22,16,'f-screen',2)+ECG(110,36,.55)+LN('M100 56 Q94 62 70 56','s-furn2');
+  if (t>=2) s += C(116,41,1.5,'f-bad blink')+C(122,40,1.5,'f-acc blink','style="animation-delay:.6s"');
+  if (t>=3) s += R(58,10,40,24,'f-furn2',3)+R(60,12,36,20,'f-screen',2)+ECG(63,20,.8)+ECG(63,27,.8);
+  return s;
+ },
+ xray: function(t){
+  var s = '';
+  if (t>=3){
+   s += LN('M84 44 m-24 0 a24 24 0 1 0 48 0 a24 24 0 1 0 -48 0','s-furn2','style="stroke-width:9"')+C(84,44,15,'f-screen')+C(84,16,2,'f-good blink');
+   s += R(30,58,110,5,'f-furn',2)+'<g class="slide">'+C(40,55,3.4,'f-skin')+R(44,53,36,5,'f-acc',2.5)+'</g>';
+  } else {
+   s += R(40,62,80,5,'f-furn',2)+R(46,67,3,9,'f-furn2')+R(110,67,3,9,'f-furn2')+C(48,59,3.4,'f-skin')+R(52,57,36,5,'f-acc',2.5);
+   s += R(112,6,5,44,'f-furn2')+R(60,8,56,5,'f-furn',2)+R(80,12,12,10,'f-furn2',2)+'<path d="M82 22 L90 22 L96 58 L66 58 Z" class="f-gold flash"/>';
+  }
+  s += R(124,30,20,46,'f-furn2',2,'opacity=".35"')+PL(136,76,'f-coat','bob');
+  if (t>=2) s += R(126,38,16,12,'f-screen',1)+R(128,43,12,2,'f-good');
+  return s;
+ },
+ ward: function(t){
+  var xs = t===1?[16,58]:t===2?[6,42,78]:[3,31,59,87], cl = ['f-acc','f-gold','f-good','f-acc'], s = '';
+  xs.forEach(function(bx,i){ s += BED(bx,60,26)+LIE(bx,60,cl[i%4],'',15); if (t>=3) s += R(bx+8,38,10,7,'f-screen',1)+R(bx+10,41,6,1.2,'f-good blink'); });
+  s += PL(20,76,'f-coat','walk');
+  if (t>=2) s += PL(138,58,'f-coat','bob')+R(116,54,30,4,'f-furn',1)+R(118,58,26,18,'f-furn2')+R(122,42,12,9,'f-screen',1);
+  return s;
+ },
+ icu: function(t){
+  var xs = t===1?[20]:t===2?[10,64]:[4,52,100], s = '';
+  xs.forEach(function(bx){
+   s += BED(bx,60,40)+LIE(bx,60,'f-acc')+R(bx+8,22,26,16,'f-screen',2)+ECG(bx+10,31,.62)+R(bx+30,42,8,12,'f-furn2',1)+LN('M'+(bx+34)+' 54 Q'+(bx+22)+' 56 '+(bx+9)+' 57','s-furn2');
+  });
+  s += t===1 ? PL(104,76,'f-coat','bob') : t===2 ? PL(120,76,'f-coat','bob') : PL(48,76,'f-coat','bob');
+  return s;
+ },
+ op: function(t){
+  var s = R(46,58,58,6,'f-furn',2)+R(72,64,6,12,'f-furn2')+C(54,55,3.4,'f-skin')+R(58,53,40,5,'f-acc',2.5);
+  s += '<path d="M66 20 L84 20 L100 58 L50 58 Z" class="f-gold cone"/>'+LN('M75 0 V14','s-furn2')+C(75,17,9,'f-gold glow');
+  s += PL(34,76,'f-good','bob')+PL(116,76,'f-good','bob',.8)+R(120,22,24,16,'f-screen',2)+ECG(121,30,.6);
+  if (t>=2) s += R(6,30,22,46,'f-furn2',2)+R(9,34,16,10,'f-screen',1)+R(9,48,16,2,'f-acc blink');
+  if (t>=3) s += '<g class="sway">'+LN('M60 0 V14 L66 34 L62 52','s-furn','style="stroke-width:3"')+'</g><g class="sway" style="animation-delay:-1.4s">'+LN('M92 0 V14 L86 34 L88 52','s-furn','style="stroke-width:3"')+'</g>';
+  return s;
+ }
+};
+
+var POS = { op:[0,0], icu:[1,0], ward:[0,1], xray:[1,1], us:[0,2], lab:[1,2], pharm:[0,3], proc:[1,3], reg:[0,4], ther:[1,4] };
+var EV = {
+ reg:["пациент записан на приём","выдан талон к терапевту","оформлена карта нового пациента"],
+ ther:["измерено давление","снята ЭКГ","назначено лечение при ОРВИ"],
+ proc:["поставлена капельница","сделана внутримышечная инъекция","взята кровь из вены"],
+ lab:["готов общий анализ крови","идёт центрифугирование проб","получен результат биохимии"],
+ pharm:["выдан рецептурный препарат","принята поставка лекарств","пациенту объяснили схему приёма"],
+ us:["исследование брюшной полости завершено","оценён кровоток по допплеру","осмотр щитовидной железы"],
+ xray:["снимок грудной клетки готов","сделан рентген голени","идёт компьютерная томография"],
+ ward:["врач провёл обход палат","пациенту измерили температуру","сменили повязку"],
+ reg2:[],
+ icu:["показатели стабильны","настроена вентиляция лёгких","дежурная бригада у монитора"],
+ op:["операция идёт по плану","хирурги готовят следующий этап","анестезиолог следит за показателями"]
+};
+function pickEvent(){
+  var built = ROOMS.filter(function(r){ return tier(r.id)>0; });
+  var r = built[Math.floor(Math.random()*built.length)], arr = EV[r.id];
+  return r.name+": "+arr[Math.floor(Math.random()*arr.length)];
+}
+function roomSvg(r,t,x,y,lvl){
+  var g = '<g transform="translate('+x+' '+y+')">';
+  if (t===0){
+    g += R(0,0,150,88,'ghost',4,'stroke-dasharray="4 3"');
+    g += '<text x="75" y="42" class="t-label" text-anchor="middle" font-size="10">Свободное помещение</text>';
+    g += '<text x="75" y="57" class="t-label" text-anchor="middle" font-size="9">'+(lvl >= r.min ? 'Можно построить' : 'Откроется на уровне '+r.min)+'</text>';
+  } else {
+    g += R(0,0,150,76,'f-wall',3)+R(0,76,150,12,'f-floor')+ART[r.id](t);
+    g += '<text x="6" y="11" class="t-label" font-size="8">'+esc(r.name)+'</text>';
+    for (var i=0;i<3;i++) g += R(118+i*10,4,8,3,i<t?'f-acc':'f-furn',1);
+  }
+  return g+'</g>';
+}
+function clinicArt(){
+  var lvl = levelOf(S.xp), s = '<svg class="clinic-art" viewBox="0 0 360 560" role="img" aria-label="Клиника в разрезе: комнаты, персонал и пациенты">';
+  s += R(0,0,360,560,'f-sky')+R(8,54,344,466,'f-shell',6);
+  var nm = esc(S.name);
+  s += R(70,8,220,32,'f-acc',6)+R(80,18.5,12,3.4,'f-ink')+R(84.3,14,3.4,12,'f-ink');
+  s += '<text x="196" y="29" class="t-ink" text-anchor="middle" font-size="12"'+(S.name.length>20?' textLength="170" lengthAdjust="spacingAndGlyphs"':'')+'>'+nm+'</text>';
+  s += R(164,60,32,456,'f-floor2')+LN('M180 66 V510','s-furn','stroke-dasharray="3 5" opacity=".5"');
+  ROOMS.forEach(function(r){ var p = POS[r.id]; s += roomSvg(r, tier(r.id), p[0]===0?14:196, 60+p[1]*92, lvl); });
+  var built = ROOMS.filter(function(r){ return tier(r.id)>0; }).length, n = Math.min(5, Math.max(1,built)), cols = ['f-acc','f-gold','f-coat'];
+  for (var i=0;i<n;i++) s += '<g class="walkv" style="animation-duration:'+(9+i*2.3)+'s;animation-delay:-'+(i*3.1)+'s">'+PL(180+(i%2?6:-6),500,cols[i%3])+'</g>';
+  s += R(170,486,20,30,'f-furn2',2)+R(179.4,486,1.2,30,'f-furn')+C(180,481,2,'f-good blink');
+  s += R(0,520,360,40,'f-ground')+LN('M0 546 H360','s-furn','stroke-dasharray="10 8" opacity=".5"');
+  s += '<g transform="translate(0 546)"><g class="drive">'+R(0,-14,30,16,'f-coat',3)+R(22,-10,12,12,'f-coat',2)+R(12,-10,8,2.4,'f-bad')+R(14.8,-12.8,2.4,8,'f-bad')+C(15,-16,2,'f-bad blink')+C(7,3,3,'f-furn2')+C(26,3,3,'f-furn2')+'</g></g>';
+  return s+'</svg>';
+}
+
+/* ===== 3D-вид клиники (three.js) ===== */
+var clinicMode = "2d", T3 = null;
+function stop3d(){
+  if (T3){
+    cancelAnimationFrame(T3.raf);
+    window.removeEventListener("resize", T3.onResize);
+    try { T3.controls.dispose(); T3.renderer.dispose(); } catch(e){}
+    T3 = null;
+  }
+}
+function loadScript(src){
+  return new Promise(function(res, rej){
+    var s = document.createElement("script"); s.src = src; s.onload = res;
+    s.onerror = function(){ rej(new Error(src)); };
+    document.head.appendChild(s);
+  });
+}
+function ensureThree(){
+  if (window.THREE && THREE.OrbitControls) return Promise.resolve();
+  return loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js").then(function(){
+    return loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js");
+  });
+}
+function init3d(el){
+  el.innerHTML = '<p class="rline" style="padding:12px">Загружаю 3D…</p>';
+  ensureThree().then(function(){
+    if (!document.body.contains(el)) return;
+    el.innerHTML = ""; run3d(el);
+  }).catch(function(){
+    el.innerHTML = '<p class="rline" style="padding:12px">Не удалось загрузить 3D. Переключитесь на схему.</p>';
+  });
+}
+
+function run3d(el){
+  var W = el.clientWidth || 340, H = Math.round(Math.min(640, W*1.35)), renderer;
+  try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
+  catch(e){ el.innerHTML = '<p class="rline" style="padding:12px">Этот браузер не поддерживает 3D. Используйте схему.</p>'; return; }
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.setSize(W, H);
+  renderer.domElement.style.cssText = "display:block;width:100%;height:auto;border-radius:8px";
+  el.appendChild(renderer.domElement);
+
+  var cs = getComputedStyle(document.documentElement);
+  function cv(n){ var v = cs.getPropertyValue(n).trim(); return new THREE.Color(v || "#888888"); }
+  var P = { sky:cv("--sky"), shell:cv("--shell"), wall:cv("--wall"), floor:cv("--floor"), floor2:cv("--floor2"), furn:cv("--furn"), furn2:cv("--furn2"),
+    coat:cv("--coat"), skin:cv("--skin"), ground:cv("--ground"), acc:cv("--accent"), gold:cv("--gold"), bad:cv("--bad"), good:cv("--good"), screen:cv("--screen") };
+  var INK = cs.getPropertyValue("--ink").trim() || "#111", INKACC = cs.getPropertyValue("--accent-ink").trim() || "#fff", ACC = cs.getPropertyValue("--accent").trim() || "#0b7a78";
+
+  var scene = new THREE.Scene(); scene.background = P.sky;
+  scene.add(new THREE.AmbientLight(0xffffff, 0.78));
+  var sun = new THREE.DirectionalLight(0xffffff, 0.65); sun.position.set(6, 18, 20); scene.add(sun);
+  var camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 200);
+  camera.position.set(6, 9.5, 26);
+  var controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 6.8, 0);
+  controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = 0.08;
+  controls.minDistance = 12; controls.maxDistance = 38;
+  controls.minPolarAngle = 0.6; controls.maxPolarAngle = 1.65;
+  controls.minAzimuthAngle = -1.2; controls.maxAzimuthAngle = 1.2;
+  controls.update();
+
+  var mats = {}, anims = [];
+  function M(c){ var k = c.getHexString(); return mats[k] || (mats[k] = new THREE.MeshLambertMaterial({ color: c })); }
+  var BOX = new THREE.BoxGeometry(1,1,1), CYL = new THREE.CylinderGeometry(1,1,1,14), SPH = new THREE.SphereGeometry(1,12,10), PLANE = new THREE.PlaneGeometry(1,1);
+  function bx(g,w,h,d,c,x,y,z){ var m = new THREE.Mesh(BOX, M(c)); m.scale.set(w,h,d); m.position.set(x, y+h/2, z); g.add(m); return m; }
+  function cy(g,r,h,c,x,y,z){ var m = new THREE.Mesh(CYL, M(c)); m.scale.set(r,h,r); m.position.set(x, y+h/2, z); g.add(m); return m; }
+  function sp(g,r,c,x,y,z){ var m = new THREE.Mesh(SPH, M(c)); m.scale.set(r,r,r); m.position.set(x,y,z); g.add(m); return m; }
+
+  function ecgTexture(){
+    var c = document.createElement("canvas"); c.width = 256; c.height = 64;
+    var x = c.getContext("2d"); x.fillStyle = "#" + P.screen.getHexString(); x.fillRect(0,0,256,64);
+    x.strokeStyle = "#52d58a"; x.lineWidth = 3; x.lineJoin = "round"; x.beginPath(); x.moveTo(0,36);
+    [0,128].forEach(function(o){ x.lineTo(o+30,36); x.lineTo(o+38,14); x.lineTo(o+48,56); x.lineTo(o+58,24); x.lineTo(o+66,36); x.lineTo(o+128,36); });
+    x.stroke();
+    var t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; return t;
+  }
+  var ecgTex = ecgTexture(), ecgMat = new THREE.MeshBasicMaterial({ map: ecgTex });
+  function scr(g,w,h,x,y,z){ var m = new THREE.Mesh(PLANE, ecgMat); m.scale.set(w,h,1); m.position.set(x,y,z); g.add(m); return m; }
+  function led(g,x,y,z,c,ph){ var m = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: c })); m.scale.set(.06,.06,.06); m.position.set(x,y,z); g.add(m); anims.push(function(t){ m.visible = Math.sin(t*3 + (ph||0)) > -0.2; }); return m; }
+  function pr(g,x,z,c,mode,ph,range,y0){
+    var p = new THREE.Group(); y0 = y0 || 0; p.position.set(x,y0,z);
+    cy(p,.13,.45,P.furn2,0,0,0); cy(p,.2,.5,c,0,.45,0); sp(p,.17,P.skin,0,1.15,0);
+    g.add(p); ph = ph || 0;
+    if (mode === "walk") anims.push(function(t){ p.position.x = x + (Math.sin(t*.5+ph)*.5+.5)*(range||2); p.position.y = y0 + Math.abs(Math.sin(t*5+ph))*.03; });
+    else anims.push(function(t){ p.position.y = y0 + Math.abs(Math.sin(t*2+ph))*.04; });
+    return p;
+  }
+  function lie(g,x,y,z,c,alongZ){
+    var l = new THREE.Group(); l.position.set(x,y,z);
+    sp(l,.17,P.skin,-.55,.18,0); bx(l,.95,.2,.42,c,.05,.05,0);
+    if (alongZ) l.rotation.y = Math.PI/2;
+    g.add(l); return l;
+  }
+  function label(text, sub, w, h, big){
+    var c = document.createElement("canvas"); c.width = 512; c.height = sub ? 160 : 96; var x = c.getContext("2d");
+    x.textAlign = "center"; x.fillStyle = INK; x.font = "600 " + (big?46:40) + "px Onest, system-ui, sans-serif"; x.fillText(text, 256, sub ? 62 : 62);
+    if (sub){ x.font = "400 30px Onest, system-ui, sans-serif"; x.fillText(sub, 256, 116); }
+    var m = new THREE.Mesh(PLANE, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
+    m.scale.set(w,h,1); return m;
+  }
+
+  var RW = 5, RD = 4, CW = 1.4, FH = 2.9, WH = FH - 0.15;
+  var B = {
+   reg: function(g,t){
+    bx(g,2.2,.85,.7,P.furn2,-1,0,-.8); bx(g,2.3,.08,.8,P.furn,-1,.85,-.8); bx(g,.55,.38,.05,P.screen,-1.5,.93,-.85);
+    pr(g,-1,-1.5,P.coat,"bob",0);
+    if (t>=2) led(g,-.4,.92,-.75,P.acc,0);
+    if (t>=3){ pr(g,-1.9,-1.5,P.coat,"bob",1); bx(g,1,.35,.05,P.acc,1.4,1.8,-1.93); }
+    bx(g,2,.4,.5,P.furn,1.2,0,1.3); pr(g,.8,1.3,P.acc,"bob",.3,0,.3);
+    if (t>=2) pr(g,1.3,1.3,P.gold,"bob",1.1,0,.3);
+    if (t>=3) pr(g,1.8,1.3,P.acc,"bob",2,0,.3);
+   },
+   ther: function(g,t){
+    bx(g,1.8,.8,.7,P.furn2,.9,0,-1); bx(g,1.9,.07,.8,P.furn,.9,.8,-1); pr(g,.9,-1.6,P.coat,"bob",.5);
+    bx(g,.5,.4,.5,P.furn,-.9,0,-.3); pr(g,-.9,-.3,P.acc,"bob",.7,0,.3); bx(g,.3,.1,.2,P.gold,.4,.87,-1);
+    if (t>=2){ bx(g,.7,.8,.6,P.furn2,1.9,0,-.2); scr(g,.5,.3,1.9,.55,.11); }
+    if (t>=3){ bx(g,1.6,.9,.08,P.furn2,-1.4,1.3,-1.95); scr(g,1.4,.7,-1.4,1.75,-1.9); }
+   },
+   proc: function(g,t){
+    bx(g,2.3,.45,.9,P.furn,-.8,0,.2); lie(g,-1.1,.45,.2,P.acc); pr(g,.9,1.2,P.coat,"bob",0);
+    bx(g,1,1.7,.5,P.furn2,1.8,0,-1.7);
+    if (t>=2){ cy(g,.03,1.8,P.furn,.8,0,-.5); bx(g,.2,.3,.08,P.acc,.8,1.5,-.5); }
+    if (t>=3){ bx(g,.8,.5,.5,P.bad,1.8,0,-.9); bx(g,.4,.2,.04,P.screen,1.8,.25,-.64); led(g,2.1,.45,-.64,P.gold,0); }
+   },
+   lab: function(g,t){
+    bx(g,4.2,.9,.7,P.furn2,0,0,-1.55); bx(g,4.3,.07,.8,P.furn,0,.9,-1.55); pr(g,-1.2,-.7,P.coat,"bob",0);
+    bx(g,.08,.3,.08,P.bad,-.3,.97,-1.5); bx(g,.08,.3,.08,P.acc,-.15,.97,-1.5); bx(g,.08,.3,.08,P.gold,0,.97,-1.5);
+    cy(g,.3,.25,P.furn,.9,.97,-1.5); var rot = bx(g,.5,.05,.08,P.gold,.9,1.25,-1.5);
+    anims.push(function(t,dt){ rot.rotation.y += dt*8; });
+    if (t>=2){ bx(g,1,.8,.6,P.furn2,1.8,.97,-1.6); bx(g,.5,.3,.03,P.screen,1.8,1.3,-1.29); led(g,2.15,1.2,-1.29,P.good,0); }
+    if (t>=3){ bx(g,2.4,.06,.4,P.furn,-1,1.6,-1.8); led(g,-1.8,1.72,-1.7,P.acc,0); led(g,-1.2,1.72,-1.7,P.gold,1); led(g,-.6,1.72,-1.7,P.good,2); }
+   },
+   pharm: function(g,t){
+    var ys = t===1?[1.3]:t===2?[.8,1.5]:[.6,1.2,1.8], cl = [P.acc,P.gold,P.bad,P.furn];
+    ys.forEach(function(y,i){ bx(g,4.4,.05,.4,P.furn2,0,y,-1.8); for (var k=0;k<9;k++) bx(g,.3,.28,.25,cl[(k+i)%4],-2+k*.5,y+.05,-1.8); });
+    bx(g,3,.9,.6,P.furn2,.6,0,-.3); bx(g,3.1,.07,.7,P.furn,.6,.9,-.3); pr(g,.6,-.95,P.coat,"bob",0);
+    pr(g,-1.5,.6,P.acc,"bob",.7);
+    if (t>=3) bx(g,.5,.35,.05,P.screen,1.6,.97,-.3);
+   },
+   us: function(g,t){
+    bx(g,2.2,.5,.9,P.furn,-1,0,.2); lie(g,-1.3,.5,.2,P.acc); pr(g,.4,.8,P.coat,"bob",0);
+    bx(g,.8,1,.6,P.furn2,1.2,0,-.3); bx(g,.7,.45,.05,P.screen,1.2,1,-.3); scr(g,.6,.35,1.2,1.22,-.27);
+    if (t>=2){ led(g,1.5,.9,.02,P.bad,0); led(g,.9,.9,.02,P.acc,1); }
+    if (t>=3){ bx(g,1.6,.9,.08,P.furn2,-1.2,1.2,-1.95); scr(g,1.4,.7,-1.2,1.65,-1.9); }
+   },
+   xray: function(g,t){
+    if (t<3){
+     cy(g,.1,2.3,P.furn2,1.9,0,-1); bx(g,2.6,.12,.15,P.furn,.65,2.15,-1); bx(g,.5,.35,.4,P.furn2,-.4,1.85,-1);
+     bx(g,2.4,.4,.8,P.furn,-.4,0,-1); lie(g,-.7,.4,-1,P.acc);
+     var beam = new THREE.Mesh(new THREE.CylinderGeometry(.15,.6,1.1,14,1,true), new THREE.MeshBasicMaterial({ color: P.gold, transparent: true, opacity: .35, side: THREE.DoubleSide }));
+     beam.position.set(-.4,1.3,-1); g.add(beam);
+     anims.push(function(t){ beam.visible = (t % 3.2) > 2.9; });
+    } else {
+     var ring = new THREE.Mesh(new THREE.TorusGeometry(.95,.32,12,28), M(P.furn2)); ring.position.set(0,1.3,-.9); g.add(ring);
+     led(g,0,2.45,-.9,P.good,0); bx(g,.9,.35,3,P.furn,0,.35,.4);
+     var pat = lie(g,0,.7,.4,P.acc,true);
+     anims.push(function(t){ pat.position.z = .4 + Math.sin(t*.6)*.8; });
+    }
+    pr(g,2.1,1.3,P.coat,"bob",0);
+    if (t===2) bx(g,1.4,.04,.7,P.acc,-.4,.4,-1);
+   },
+   ward: function(g,t){
+    var xs = t===1?[-1.2,.6]:t===2?[-1.8,-.6,.6]:[-1.8,-.6,.6,1.8], cl = [P.acc,P.gold,P.good,P.acc];
+    xs.forEach(function(x,i){ bx(g,.85,.4,1.9,P.furn,x,0,-.9); lie(g,x,.4,-.9,cl[i%4],true); if (t>=3) bx(g,.4,.25,.05,P.screen,x,1.3,-1.93); });
+    pr(g,-1.8,1.4,P.coat,"walk",0,3.2);
+    if (t>=2){ bx(g,2,.9,.5,P.furn2,1.2,0,1.6); bx(g,.5,.3,.05,P.screen,1.6,.95,1.6); }
+   },
+   icu: function(g,t){
+    var xs = t===1?[-.8]:t===2?[-1.4,.8]:[-1.7,0,1.7];
+    xs.forEach(function(x){
+     bx(g,.9,.45,1.9,P.furn,x,0,-.9); lie(g,x,.45,-.9,P.acc,true);
+     bx(g,.7,.45,.06,P.furn2,x,1.4,-1.93); scr(g,.6,.35,x,1.62,-1.89); bx(g,.3,.5,.3,P.furn2,x+.7,0,-1);
+    });
+    pr(g, t===1 ? 1.4 : t===2 ? 2 : -.85, 1.3, P.coat, "bob", 0);
+   },
+   op: function(g,t){
+    cy(g,.15,.75,P.furn2,0,0,-.2); bx(g,2.1,.1,.9,P.furn,0,.75,-.2); lie(g,-.2,.85,-.2,P.acc);
+    pr(g,-1.2,.7,P.good,"bob",0); pr(g,1.2,.7,P.good,"bob",.8);
+    cy(g,.03,1,P.furn2,0,1.6,-.2);
+    var lamp = cy(g,.5,.1,P.gold,0,1.5,-.2);
+    var cone = new THREE.Mesh(new THREE.CylinderGeometry(.15,.9,1,14,1,true), new THREE.MeshBasicMaterial({ color: P.gold, transparent: true, opacity: .16, side: THREE.DoubleSide })); cone.position.set(0,1,-.2); g.add(cone);
+    anims.push(function(t){ cone.material.opacity = .12 + Math.sin(t*2)*.05; });
+    bx(g,1,.7,.06,P.furn2,1.8,1.2,-1.93); scr(g,.9,.55,1.8,1.55,-1.89);
+    if (t>=2){ bx(g,.7,1.5,.6,P.furn2,-2,0,-1.5); scr(g,.5,.35,-2,1.2,-1.19); }
+    if (t>=3){
+     [-.7,.7].forEach(function(x,i){
+      var pv = new THREE.Group(); pv.position.set(x,2.5,-.2); cy(pv,.06,1.6,P.furn,0,-1.6,0); g.add(pv);
+      anims.push(function(t){ pv.rotation.x = Math.sin(t*.9+i*1.5)*.12; });
+     });
+    }
+   }
+  };
+  var POS3 = { op:[0,4], icu:[1,4], ward:[0,3], xray:[1,3], us:[0,2], lab:[1,2], pharm:[0,1], proc:[1,1], reg:[0,0], ther:[1,0] };
+
+  var root = new THREE.Group(); scene.add(root);
+  var gnd = bx(root, 70, .4, 30, P.ground, 0, -.6, 6);
+  var totalW = 2*RW + CW;
+  for (var f=0; f<=5; f++) bx(root, totalW+.4, .15, RD+.4, P.floor, 0, f*FH - .15, 0);
+  for (var f2=0; f2<5; f2++){
+    var y0 = f2*FH;
+    bx(root, totalW, WH, .12, P.wall, 0, y0, -RD/2 - .06);
+    bx(root, .12, WH, RD, P.shell, -totalW/2 - .06, y0, 0); bx(root, .12, WH, RD, P.shell, totalW/2 + .06, y0, 0);
+    [-1,1].forEach(function(sd){ bx(root, .1, WH, 1.6, P.shell, sd*CW/2, y0, -1.2); bx(root, .1, WH, 1.2, P.shell, sd*CW/2, y0, 1.4); });
+  }
+  var lvl = levelOf(S.xp);
+  ROOMS.forEach(function(r){
+    var pos = POS3[r.id], t = tier(r.id), g = new THREE.Group();
+    g.position.set((pos[0]===0?-1:1)*(CW/2 + RW/2), pos[1]*FH, 0); root.add(g);
+    if (t === 0){
+      var edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(RW-.1, WH-.1, RD-.1)), new THREE.LineBasicMaterial({ color: P.furn, transparent: true, opacity: .7 }));
+      edges.position.set(0, WH/2, 0); g.add(edges);
+      var lb = label("Свободное помещение", lvl >= r.min ? "Можно построить" : "Откроется на уровне "+r.min, 3.8, 1.2, false); lb.position.set(0,1.4,-1.85); g.add(lb);
+    } else {
+      bx(g, RW, .03, RD, P.floor2, 0, 0, 0);
+      B[r.id](g, t);
+      var nm = label(r.name, "", 2.4, .45, false); nm.position.set(-1.3, WH - .3, -1.92); g.add(nm);
+    }
+  });
+  /* лифт */
+  var cab = new THREE.Group(); root.add(cab);
+  bx(cab, 1, 2.2, 1, P.furn2, 0, 0, -1.2); bx(cab, .7, 1.2, .05, P.coat, 0, .6, -.68);
+  anims.push(function(t){ cab.position.y = (Math.sin(t*.35)*.5+.5)*4*FH; });
+  /* вывеска */
+  var sg = new THREE.Group(); sg.position.set(0, 5*FH + .9, -1.4); root.add(sg);
+  bx(sg, 7, 1.2, .2, P.acc, 0, -.6, 0);
+  var sc = document.createElement("canvas"); sc.width = 700; sc.height = 120; var sx = sc.getContext("2d");
+  sx.fillStyle = INKACC; sx.textAlign = "center"; sx.font = "600 52px Unbounded, Onest, system-ui, sans-serif"; sx.fillText(S.name, 350, 78, 640);
+  var sm = new THREE.Mesh(PLANE, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true })); sm.scale.set(7,1.2,1); sm.position.set(0,0,.12); sg.add(sm);
+  /* скорая */
+  var amb = new THREE.Group(); amb.position.set(0,-.2,5); root.add(amb);
+  bx(amb, 2.6, 1.1, 1.1, P.coat, 0, .3, 0); bx(amb, .9, .8, 1.05, P.coat, 1.6, .3, 0);
+  bx(amb, .8, .12, .02, P.bad, -.3, .8, .56); bx(amb, .12, .6, .02, P.bad, -.3, .56, .56);
+  cy(amb,.28,.2,P.furn2,-.8,.05,.5); cy(amb,.28,.2,P.furn2,1.2,.05,.5);
+  var beacon = led(amb, 0, 1.5, 0, P.bad, 0);
+  anims.push(function(t){ amb.position.x = ((t*1.6) % 36) - 18; });
+
+  var still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var clock = new THREE.Clock();
+  T3 = { renderer: renderer, controls: controls, raf: 0, onResize: null };
+  T3.onResize = function(){ var w = el.clientWidth || W; renderer.setSize(w, Math.round(Math.min(640, w*1.35))); camera.aspect = w / Math.round(Math.min(640, w*1.35)); camera.updateProjectionMatrix(); };
+  window.addEventListener("resize", T3.onResize);
+  function frame(){
+    if (!T3) return;
+    T3.raf = requestAnimationFrame(frame);
+    var dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
+    if (!still){ for (var i=0;i<anims.length;i++) anims[i](t,dt); ecgTex.offset.x = -((t*.35) % 1); }
+    controls.update(); renderer.render(scene, camera);
+  }
+  frame();
+}
+
+/* ===== Клиника ===== */
+function clinic(){
+  var l = levelOf(S.xp);
+  var pts = 0, stf = 0; ROOMS.forEach(function(r){ var t = tier(r.id); if (t>0){ pts += t+1; stf += t>1 ? 2 : 1; } });
+  var cards = ROOMS.map(function(r){
+    var t = tier(r.id), locked = t===0 && l < r.min;
+    var pips = [0,1,2].map(function(i){ return '<span class="pip '+(i<t?'on':'')+'"></span>'; }).join("");
+    var lines = "";
+    if (t>0) lines += '<p class="rline">'+esc(r.tiers[t-1][0])+' · '+r.inc[t-1]+' ₽ в час'+(r.perk ? ' · +'+r.perk.v[t-1]+' '+r.perk.txt : '')+'</p>';
+    else lines += '<p class="rline">'+(locked ? 'Откроется на уровне '+r.min+' ('+TITLES[r.min-1]+')' : 'Не построена')+'</p>';
+    var btn = "";
+    if (t>=3) btn = '<button class="btn ghost small" disabled>Максимальное оснащение</button>';
+    else if (locked) btn = '<button class="btn ghost small" disabled>Нужен уровень '+r.min+'</button>';
+    else {
+      var nx = r.tiers[t], can = S.money >= nx[1];
+      btn = '<button class="btn small" data-buy="'+r.id+'"'+(can?'':' disabled')+'>'+(t===0?'Построить':'Улучшить')+': '+esc(nx[0])+' · '+fmt(nx[1])+' ₽</button>';
+    }
+    return '<div class="room '+(locked?'locked':'')+'"><div class="rhead"><h3>'+esc(r.name)+'</h3><div class="pips">'+pips+'</div></div>'+lines+btn+'</div>';
+  }).join("");
+  shell(
+    '<div class="nav" id="mode" style="grid-template-columns:repeat(2,1fr)"><button data-m="2d" aria-current="'+(clinicMode==="2d")+'">Схема</button><button data-m="3d" aria-current="'+(clinicMode==="3d")+'">3D</button></div>' +
+    '<div class="panel art">'+(clinicMode==="3d" ? '<div id="stage3d"></div>' : clinicArt())+'<p class="rline" id="event" style="padding:0 8px">'+esc(pickEvent())+'</p><p class="note" style="padding:0 8px 4px">Сейчас в клинике: пациентов '+pts+', сотрудников '+stf+(clinicMode==="3d" ? ' · вращайте здание пальцем, масштаб щипком' : '')+'</p></div>' +
+    '<div class="panel"><div class="collect"><div><p class="eyebrow">Выручка за время простоя</p><div class="big" id="pend">'+fmt(pending())+' ₽</div><p class="note">Клиника приносит '+fmt(incomeH())+' ₽ в час, копится до '+CAP_H+' часов</p></div>' +
+    '<button class="btn small" id="collect" style="width:auto">Забрать</button></div>' +
+    (flash ? '<p class="msg" style="color:var(--good)">'+flash+'</p>' : '') + '</div>' +
+    '<div class="panel"><p class="eyebrow">Название клиники</p>' +
+    '<input type="text" id="cname" maxlength="32" value="'+esc(S.name)+'" aria-label="Название клиники"></div>' +
+    '<div class="rooms" id="rooms">'+cards+'</div>'
+  );
+  ticker = setInterval(function(){ var el = document.getElementById("pend"); if (el) el.textContent = fmt(pending())+" ₽"; var ev = document.getElementById("event"); if (ev) ev.textContent = pickEvent(); }, 4500);
+  document.getElementById("mode").onclick = function(e){ var m = e.target.getAttribute && e.target.getAttribute("data-m"); if (m && m !== clinicMode){ clinicMode = m; clinic(); } };
+  if (clinicMode === "3d") init3d(document.getElementById("stage3d"));
+  document.getElementById("collect").onclick = function(){
+    var p = pending();
+    if (p>0){ S.money += p; S.last = Date.now(); save(); flash = "Получено "+fmt(p)+" ₽"; } else { flash = "Пока нечего забирать"; }
+    clinic();
+  };
+  document.getElementById("cname").onchange = function(e){ var v = e.target.value.trim(); if (v){ S.name = v.slice(0,32); save(); document.querySelector(".eyebrow").textContent = S.name; } };
+  document.getElementById("rooms").onclick = function(e){
+    var id = e.target.getAttribute && e.target.getAttribute("data-buy"); if (!id) return;
+    var r = ROOMS.filter(function(x){ return x.id===id; })[0], t = tier(id), nx = r.tiers[t];
+    if (!nx || S.money < nx[1] || (t===0 && l < r.min)) return;
+    var p = pending(); S.money += p; S.last = Date.now();
+    S.money -= nx[1]; S.rooms[id] = t+1; save();
+    flash = (t===0 ? "Построено: " : "Установлено: ") + (t===0 ? r.name+" — " : "")+nx[0];
+    clinic();
+  };
+}
+
+/* ===== Банк вопросов: импорт своих ===== */
+function parseBank(text){
+  var lines = text.replace(/\r/g,"").split("\n"), out = [], bad = 0, curCat = "Мои вопросы", cur = null;
+  function flush(){
+    if (!cur) return;
+    if (cur.q && cur.right !== null && cur.wrong.length >= 1 && cur.wrong.length <= 5) out.push({ c: cur.c, q: cur.q, a: [cur.right].concat(cur.wrong), e: cur.e });
+    else bad++;
+    cur = null;
+  }
+  lines.forEach(function(raw){
+    var s = raw.trim();
+    if (!s){ flush(); return; }
+    if (s.charAt(0)==="#" && !cur){ curCat = s.replace(/^#+\s*/,"") || "Мои вопросы"; return; }
+    if (!cur) cur = { c: curCat, q: "", right: null, wrong: [], e: "" };
+    if (s.charAt(0)==="+"){ var t = s.slice(1).trim(); if (cur.right === null) cur.right = t; else cur.wrong.push(t); }
+    else if (s.charAt(0)==="-"){ cur.wrong.push(s.slice(1).trim()); }
+    else if (s.charAt(0)==="="){ cur.e = s.slice(1).trim(); }
+    else if (!cur.wrong.length && cur.right===null){ cur.q += (cur.q ? " " : "") + s; }
+  });
+  flush();
+  return { ok: out, bad: bad };
+}
+function bank(){
+  var cnt = CUSTOM.length;
+  shell(
+    '<div class="panel"><p class="eyebrow">Свои вопросы</p><p>Загружено: <b>'+cnt+'</b>. Они появятся в списке разделов рядом со встроенными и хранятся только в этом браузере.</p>' +
+    '<p class="note">Формат: вопрос, затем варианты. Верный вариант начинается с «+», неверные с «-». Строка с «=» даёт пояснение. Вопросы разделяются пустой строкой, строка «# Тема» задаёт раздел.</p>' +
+    '<pre># Эпидемиология\nКакой путь передачи характерен для гепатита А?\n+ Фекально-оральный\n- Парентеральный\n- Трансмиссивный\n= Заражение через воду, пищу и руки.</pre>' +
+    '<textarea id="paste" placeholder="Вставьте вопросы сюда" aria-label="Текст с вопросами"></textarea>' +
+    '<input type="file" id="file" accept=".txt,text/plain" aria-label="Файл .txt с вопросами">' +
+    '<button class="btn" id="add">Добавить в банк</button>' +
+    '<button class="btn ghost" id="clear"'+(cnt?'':' disabled')+'>Удалить загруженные вопросы</button>' +
+    '<p class="msg" id="msg" aria-live="polite">'+(flash ? esc(flash) : '')+'</p></div>'
+  );
+  var msg = document.getElementById("msg");
+  document.getElementById("file").onchange = function(e){
+    var f = e.target.files && e.target.files[0]; if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){ document.getElementById("paste").value = String(rd.result); msg.textContent = "Файл прочитан, нажмите «Добавить в банк»."; };
+    rd.onerror = function(){ msg.textContent = "Не удалось прочитать файл."; };
+    rd.readAsText(f, "utf-8");
+  };
+  document.getElementById("add").onclick = function(){
+    var r = parseBank(document.getElementById("paste").value);
+    if (!r.ok.length){ msg.textContent = "Не нашлось ни одного вопроса в нужном формате. Проверьте, что у каждого вопроса есть один вариант с «+» и хотя бы один с «-»."; return; }
+    var prev = CUSTOM; CUSTOM = CUSTOM.concat(r.ok);
+    if (!saveBank()){ CUSTOM = prev; msg.textContent = "Браузер не дал сохранить столько вопросов. Загрузите меньший файл."; return; }
+    flash = "Добавлено вопросов: "+r.ok.length+(r.bad ? ", пропущено с ошибками: "+r.bad : "");
+    cat = "Все"; bank();
+  };
+  document.getElementById("clear").onclick = function(){ CUSTOM = []; saveBank(); cat = "Все"; flash = "Загруженные вопросы удалены"; bank(); };
+}
+render();
+</script>
+
+</body></html>
