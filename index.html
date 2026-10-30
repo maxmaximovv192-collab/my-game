@@ -148,21 +148,30 @@ pre { margin: 0; font: 12px/1.5 var(--font-mono); background: var(--bg); border:
 .msg { font-size: 14px; }
 /* схема клиники */
 :root {
-  --sky: #dcebf3; --shell: #7fa4b8; --wall: #f6fafc; --floor: #c3d6df; --floor2: #dbe7ed;
-  --furn: #94b3c2; --furn2: #5f8599; --coat: #ffffff; --skin: #e2b996; --ground: #a5bcc8;
+  --sky: #071923; --shell: #183747; --wall: #385363; --floor: #203846; --floor2: #2b4858;
+  --furn: #456779; --furn2: #254758; --coat: #e5f4fa; --skin: #d9a982; --ground: #06131b;
   --screen: #0b1f24; --ecg: #52d58a;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --sky: #0a1d27; --shell: #35606f; --wall: #14333f; --floor: #0b2630; --floor2: #0e2c37;
-    --furn: #45707e; --furn2: #2e5260; --coat: #dcebf1; --skin: #c99c78; --ground: #08171e;
+    --sky: #061722; --shell: #1b3b4b; --wall: #385565; --floor: #203b4a; --floor2: #2b4d5e;
+    --furn: #52788a; --furn2: #294b5d; --coat: #e7f6fc; --skin: #d9a982; --ground: #041018;
   }
 }
 :root[data-theme="dark"] {
-  --sky: #0a1d27; --shell: #35606f; --wall: #14333f; --floor: #0b2630; --floor2: #0e2c37;
-  --furn: #45707e; --furn2: #2e5260; --coat: #dcebf1; --skin: #c99c78; --ground: #08171e;
+  --sky: #061722; --shell: #1b3b4b; --wall: #385565; --floor: #203b4a; --floor2: #2b4d5e;
+  --furn: #52788a; --furn2: #294b5d; --coat: #e7f6fc; --skin: #d9a982; --ground: #041018;
 }
 .art { padding: 8px; }
+.stage { position: relative; border-radius: 10px; overflow: hidden; background: radial-gradient(ellipse at 50% 38%, #163847, #04131d); min-height: 390px; border:1px solid rgba(0,205,225,.34); box-shadow: inset 0 0 42px rgba(0,190,220,.07); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .stage { background: radial-gradient(ellipse at 50% 38%, #163847, #04131d); } }
+:root[data-theme="dark"] .stage { background: radial-gradient(ellipse at 50% 38%, #163847, #04131d); }
+.tools { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.tools button { width: 42px; height: 42px; border-radius: 10px; border: 1px solid #1aaec2; background: rgba(5,25,37,.94); color: #d9f7ff; box-shadow:0 3px 12px rgba(0,0,0,.42), inset 0 0 12px rgba(0,190,220,.10); font: 600 20px var(--font-body); cursor: pointer; padding: 0; }
+.tools button:active { background: #07556a; }
+#sheet { display: flex; flex-direction: column; gap: 10px; }
+#sheet .chips { gap: 6px; } #sheet .chip { min-height: 36px; padding: 4px 10px; font-size: 13px; }
+
 .clinic-art { width: 100%; height: auto; display: block; border-radius: 8px; }
 .f-sky { fill: var(--sky); } .f-shell { fill: var(--shell); } .f-wall { fill: var(--wall); }
 .f-floor { fill: var(--floor); } .f-floor2 { fill: var(--floor2); } .f-furn { fill: var(--furn); }
@@ -371,7 +380,7 @@ var CAP_H = 8;
 
 /* ===== Сохранение ===== */
 var SAVE_KEY = "duty-save-v2", BANK_KEY = "duty-bank-v2";
-function newSave(){ return { money: 250, xp: 0, rooms: { reg: 1 }, last: Date.now(), name: "Городская клиника", best: 0, bestExam: 0, blocks: {} }; }
+function newSave(){ return { money: 250, xp: 0, rooms: { reg: 1 }, staff: {}, last: Date.now(), name: "Городская клиника", best: 0, bestExam: 0, blocks: {} }; }
 var S;
 function load(){
   try { var raw = localStorage.getItem(SAVE_KEY); if (raw){ var o = JSON.parse(raw); var d = newSave(); for (var k in d){ if (o[k] === undefined) o[k] = d[k]; } return o; } } catch(e){}
@@ -522,7 +531,7 @@ function cats(){
 }
 function tier(id){ return S.rooms[id] || 0; }
 function perk(type){ var sum = 0; ROOMS.forEach(function(r){ var t = tier(r.id); if (t>0 && r.perk && r.perk.t===type) sum += r.perk.v[t-1]; }); return sum; }
-function incomeH(){ var s = 0; ROOMS.forEach(function(r){ var t = tier(r.id); if (t>0) s += r.inc[t-1]; }); return s; }
+function incomeH(){ var s = 0; ROOMS.forEach(function(r){ var t = tier(r.id); if (t>0) s += r.inc[t-1] * (1 + .15 * staffN(r.id)); }); return s; }
 function pending(){ var h = Math.min(CAP_H, (Date.now() - S.last)/3600000); return Math.floor(incomeH() * Math.max(0,h)); }
 var PULSE = '<svg class="pulse" viewBox="0 0 560 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 22 H150 L162 22 L172 7 L184 37 L196 13 L204 22 H330 L342 22 L352 9 L364 35 L376 15 L384 22 H560"/></svg>';
 function heart(lost){ return '<svg class="'+(lost?'lost':'')+'" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--bad)" stroke="var(--bad)" stroke-width="1.6" stroke-linejoin="round" d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></svg>'; }
@@ -873,101 +882,6 @@ document.addEventListener("keydown", function(e){
   if (n >= 1 && n <= bk.opts.length){ var x = document.querySelectorAll("#bopts .opt")[n-1]; if (x && !x.disabled) bAnswer(n-1); }
 });
 
-/* ===== Схема клиники в разрезе ===== */
-function R(x,y,w,h,c,rx,ex){ return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" class="'+c+'"'+(rx?' rx="'+rx+'"':'')+(ex?' '+ex:'')+'/>'; }
-function C(cx,cy,r,c,ex){ return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" class="'+c+'"'+(ex?' '+ex:'')+'/>'; }
-function PL(x,y,body,anim,delay){ return '<g class="'+(anim||'')+'"'+(delay?' style="animation-delay:'+delay+'s"':'')+'>'+C(x,y-17,3.6,'f-skin')+R(x-4,y-13,8,13,body,3)+'</g>'; }
-function ECG(x,y,sc){ return '<path class="ecg" transform="translate('+x+' '+y+') scale('+(sc||1)+')" d="M0 0 h6 l2 -5 l3 9 l2 -6 l2 2 h8 l2 -5 l3 9 l2 -6 l2 2 h6"/>'; }
-function LN(d,c,ex){ return '<path d="'+d+'" class="line '+c+'"'+(ex?' '+ex:'')+'/>'; }
-function BED(x,y,w){ return R(x,y,w,6,'f-furn',2)+R(x+2,y+6,2,10,'f-furn2')+R(x+w-4,y+6,2,10,'f-furn2'); }
-function LIE(x,y,body,cls,w){ return '<g'+(cls?' class="'+cls+'"':'')+'>'+C(x+6,y-3,3.4,'f-skin')+R(x+10,y-5,w||26,5,body,2.5)+'</g>'; }
-
-var ART = {
- reg: function(t){
-  var s = PL(49,60,'f-coat','bob');
-  if (t>=3) s += PL(70,60,'f-coat','bob',.6);
-  s += R(16,54,66,4,'f-furn',1)+R(18,58,62,18,'f-furn2')+R(34,44,14,9,'f-screen',1)+R(39,53,4,2,'f-furn');
-  if (t>=2) s += R(62,50,9,3,'f-acc blink',1);
-  if (t>=3) s += R(86,22,34,14,'f-acc blink',7)+C(96,29,1.6,'f-ink')+C(103,29,1.6,'f-ink')+C(110,29,1.6,'f-ink');
-  s += R(98,66,46,4,'f-furn',1)+PL(108,76,'f-acc','bob',.3);
-  if (t>=2) s += PL(124,76,'f-gold','bob',.9);
-  if (t>=3) s += PL(140,76,'f-acc','bob',1.2);
-  return s;
- },
- ther: function(t){
-  var s = PL(40,74,'f-acc','bob')+R(32,66,16,3,'f-furn2')+PL(98,58,'f-coat','bob',.5);
-  s += R(66,56,60,4,'f-furn',1)+R(70,60,52,16,'f-furn2');
-  s += R(72,52,10,4,'f-gold',1)+LN('M86 55 q4 -8 8 0','s-furn2');
-  if (t>=2) s += R(108,46,16,10,'f-furn2',2)+R(110,48,12,6,'f-screen',1)+ECG(110.5,51,.3);
-  if (t>=3) s += R(104,12,40,26,'f-furn2',3)+R(106,14,36,22,'f-screen',2)+ECG(108,25,.85)+'<text x="132" y="22" class="t-ecg" font-size="7">72</text>';
-  return s;
- },
- proc: function(t){
-  var s = BED(14,60,68)+LIE(14,60,'f-acc','',52)+R(116,26,26,34,'f-furn2',2)+R(119,31,20,2,'f-furn')+R(119,40,20,2,'f-furn')+PL(106,76,'f-coat','bob');
-  if (t>=2) s += LN('M92 26 V76','s-furn')+R(88,20,8,11,'f-acc',2)+C(92,36,1.4,'f-acc drip')+LN('M92 32 Q84 46 66 56','s-acc');
-  if (t>=3) s += R(112,62,26,14,'f-bad',2)+R(116,65,10,6,'f-screen',1)+C(132,67,2,'f-gold blink');
-  return s;
- },
- lab: function(t){
-  var s = PL(34,58,'f-coat','bob')+R(10,58,128,4,'f-furn',1)+R(14,62,120,14,'f-furn2');
-  s += R(50,57,18,1.5,'f-furn')+R(52,50,3,8,'f-bad')+R(57,50,3,8,'f-acc')+R(62,50,3,8,'f-gold');
-  s += C(96,52,7,'f-furn')+'<g class="spin"><rect x="92" y="51" width="8" height="2" class="f-gold"/></g>';
-  if (t>=2) s += R(110,34,26,24,'f-furn2',2)+R(113,38,14,8,'f-screen',1)+C(131,41,1.6,'f-good blink')+R(114,50,4,5,'f-acc')+R(120,48,4,7,'f-gold')+R(126,51,4,4,'f-bad');
-  if (t>=3) s += R(46,18,50,14,'f-screen',2)+R(50,22,8,6,'f-acc blink')+R(62,22,8,6,'f-gold blink',0,'style="animation-delay:.5s"')+R(74,22,8,6,'f-good blink',0,'style="animation-delay:1s"');
-  return s;
- },
- pharm: function(t){
-  var ys = t===1?[36]:t===2?[24,40]:[24,35,46], cl = ['f-acc','f-gold','f-bad','f-furn'], s = '';
-  ys.forEach(function(sy,i){ s += R(12,sy,126,2,'f-furn2'); for (var k=0;k<10;k++) s += R(14+k*12.4,sy-8,9,8,cl[(k+i)%4],1); });
-  s += PL(104,64,'f-coat','bob')+R(56,58,86,4,'f-furn',1)+R(60,62,78,14,'f-furn2')+PL(34,76,'f-acc','bob',.7);
-  if (t>=3) s += R(118,48,14,9,'f-screen',1)+R(120,52,10,1.5,'f-good blink');
-  return s;
- },
- us: function(t){
-  var s = BED(12,60,62)+LIE(12,60,'f-acc','',46)+PL(88,76,'f-coat','bob');
-  s += R(106,46,26,30,'f-furn2',2)+R(108,28,22,16,'f-screen',2)+ECG(110,36,.55)+LN('M100 56 Q94 62 70 56','s-furn2');
-  if (t>=2) s += C(116,41,1.5,'f-bad blink')+C(122,40,1.5,'f-acc blink','style="animation-delay:.6s"');
-  if (t>=3) s += R(58,10,40,24,'f-furn2',3)+R(60,12,36,20,'f-screen',2)+ECG(63,20,.8)+ECG(63,27,.8);
-  return s;
- },
- xray: function(t){
-  var s = '';
-  if (t>=3){
-   s += LN('M84 44 m-24 0 a24 24 0 1 0 48 0 a24 24 0 1 0 -48 0','s-furn2','style="stroke-width:9"')+C(84,44,15,'f-screen')+C(84,16,2,'f-good blink');
-   s += R(30,58,110,5,'f-furn',2)+'<g class="slide">'+C(40,55,3.4,'f-skin')+R(44,53,36,5,'f-acc',2.5)+'</g>';
-  } else {
-   s += R(40,62,80,5,'f-furn',2)+R(46,67,3,9,'f-furn2')+R(110,67,3,9,'f-furn2')+C(48,59,3.4,'f-skin')+R(52,57,36,5,'f-acc',2.5);
-   s += R(112,6,5,44,'f-furn2')+R(60,8,56,5,'f-furn',2)+R(80,12,12,10,'f-furn2',2)+'<path d="M82 22 L90 22 L96 58 L66 58 Z" class="f-gold flash"/>';
-  }
-  s += R(124,30,20,46,'f-furn2',2,'opacity=".35"')+PL(136,76,'f-coat','bob');
-  if (t>=2) s += R(126,38,16,12,'f-screen',1)+R(128,43,12,2,'f-good');
-  return s;
- },
- ward: function(t){
-  var xs = t===1?[16,58]:t===2?[6,42,78]:[3,31,59,87], cl = ['f-acc','f-gold','f-good','f-acc'], s = '';
-  xs.forEach(function(bx,i){ s += BED(bx,60,26)+LIE(bx,60,cl[i%4],'',15); if (t>=3) s += R(bx+8,38,10,7,'f-screen',1)+R(bx+10,41,6,1.2,'f-good blink'); });
-  s += PL(20,76,'f-coat','walk');
-  if (t>=2) s += PL(138,58,'f-coat','bob')+R(116,54,30,4,'f-furn',1)+R(118,58,26,18,'f-furn2')+R(122,42,12,9,'f-screen',1);
-  return s;
- },
- icu: function(t){
-  var xs = t===1?[20]:t===2?[10,64]:[4,52,100], s = '';
-  xs.forEach(function(bx){
-   s += BED(bx,60,40)+LIE(bx,60,'f-acc')+R(bx+8,22,26,16,'f-screen',2)+ECG(bx+10,31,.62)+R(bx+30,42,8,12,'f-furn2',1)+LN('M'+(bx+34)+' 54 Q'+(bx+22)+' 56 '+(bx+9)+' 57','s-furn2');
-  });
-  s += t===1 ? PL(104,76,'f-coat','bob') : t===2 ? PL(120,76,'f-coat','bob') : PL(48,76,'f-coat','bob');
-  return s;
- },
- op: function(t){
-  var s = R(46,58,58,6,'f-furn',2)+R(72,64,6,12,'f-furn2')+C(54,55,3.4,'f-skin')+R(58,53,40,5,'f-acc',2.5);
-  s += '<path d="M66 20 L84 20 L100 58 L50 58 Z" class="f-gold cone"/>'+LN('M75 0 V14','s-furn2')+C(75,17,9,'f-gold glow');
-  s += PL(34,76,'f-good','bob')+PL(116,76,'f-good','bob',.8)+R(120,22,24,16,'f-screen',2)+ECG(121,30,.6);
-  if (t>=2) s += R(6,30,22,46,'f-furn2',2)+R(9,34,16,10,'f-screen',1)+R(9,48,16,2,'f-acc blink');
-  if (t>=3) s += '<g class="sway">'+LN('M60 0 V14 L66 34 L62 52','s-furn','style="stroke-width:3"')+'</g><g class="sway" style="animation-delay:-1.4s">'+LN('M92 0 V14 L86 34 L88 52','s-furn','style="stroke-width:3"')+'</g>';
-  return s;
- }
-};
-
 var POS = { op:[0,0], icu:[1,0], ward:[0,1], xray:[1,1], us:[0,2], lab:[1,2], pharm:[0,3], proc:[1,3], reg:[0,4], ther:[1,4] };
 var EV = {
  reg:["пациент записан на приём","выдан талон к терапевту","оформлена карта нового пациента"],
@@ -987,333 +901,316 @@ function pickEvent(){
   var r = built[Math.floor(Math.random()*built.length)], arr = EV[r.id];
   return r.name+": "+arr[Math.floor(Math.random()*arr.length)];
 }
-function roomSvg(r,t,x,y,lvl){
-  var g = '<g transform="translate('+x+' '+y+')">';
-  if (t===0){
-    g += R(0,0,150,88,'ghost',4,'stroke-dasharray="4 3"');
-    g += '<text x="75" y="42" class="t-label" text-anchor="middle" font-size="10">Свободное помещение</text>';
-    g += '<text x="75" y="57" class="t-label" text-anchor="middle" font-size="9">'+(lvl >= r.min ? 'Можно построить' : 'Откроется на уровне '+r.min)+'</text>';
-  } else {
-    g += R(0,0,150,76,'f-wall',3)+R(0,76,150,12,'f-floor')+ART[r.id](t);
-    g += '<text x="6" y="11" class="t-label" font-size="8">'+esc(r.name)+'</text>';
-    for (var i=0;i<3;i++) g += R(118+i*10,4,8,3,i<t?'f-acc':'f-furn',1);
-  }
-  return g+'</g>';
-}
-function clinicArt(){
-  var lvl = levelOf(S.xp), s = '<svg class="clinic-art" viewBox="0 0 360 560" role="img" aria-label="Клиника в разрезе: комнаты, персонал и пациенты">';
-  s += R(0,0,360,560,'f-sky')+R(8,54,344,466,'f-shell',6);
-  var nm = esc(S.name);
-  s += R(70,8,220,32,'f-acc',6)+R(80,18.5,12,3.4,'f-ink')+R(84.3,14,3.4,12,'f-ink');
-  s += '<text x="196" y="29" class="t-ink" text-anchor="middle" font-size="12"'+(S.name.length>20?' textLength="170" lengthAdjust="spacingAndGlyphs"':'')+'>'+nm+'</text>';
-  s += R(164,60,32,456,'f-floor2')+LN('M180 66 V510','s-furn','stroke-dasharray="3 5" opacity=".5"');
-  ROOMS.forEach(function(r){ var p = POS[r.id]; s += roomSvg(r, tier(r.id), p[0]===0?14:196, 60+p[1]*92, lvl); });
-  var built = ROOMS.filter(function(r){ return tier(r.id)>0; }).length, n = Math.min(5, Math.max(1,built)), cols = ['f-acc','f-gold','f-coat'];
-  for (var i=0;i<n;i++) s += '<g class="walkv" style="animation-duration:'+(9+i*2.3)+'s;animation-delay:-'+(i*3.1)+'s">'+PL(180+(i%2?6:-6),500,cols[i%3])+'</g>';
-  s += R(170,486,20,30,'f-furn2',2)+R(179.4,486,1.2,30,'f-furn')+C(180,481,2,'f-good blink');
-  s += R(0,520,360,40,'f-ground')+LN('M0 546 H360','s-furn','stroke-dasharray="10 8" opacity=".5"');
-  s += '<g transform="translate(0 546)"><g class="drive">'+R(0,-14,30,16,'f-coat',3)+R(22,-10,12,12,'f-coat',2)+R(12,-10,8,2.4,'f-bad')+R(14.8,-12.8,2.4,8,'f-bad')+C(15,-16,2,'f-bad blink')+C(7,3,3,'f-furn2')+C(26,3,3,'f-furn2')+'</g></g>';
-  return s+'</svg>';
-}
-
-/* ===== 3D-вид клиники (three.js) ===== */
-var clinicMode = "2d", T3 = null;
-function stop3d(){
-  if (T3){
-    cancelAnimationFrame(T3.raf);
-    window.removeEventListener("resize", T3.onResize);
-    try { T3.controls.dispose(); T3.renderer.dispose(); } catch(e){}
-    T3 = null;
-  }
-}
-function loadScript(src){
-  return new Promise(function(res, rej){
-    var s = document.createElement("script"); s.src = src; s.onload = res;
-    s.onerror = function(){ rej(new Error(src)); };
-    document.head.appendChild(s);
-  });
-}
+/* ===== Клиника: 3D-игра (three.js), планировка по референсу ===== */
+var T3 = null, SEL = null;
+var LAY = {
+  ther:{x:0,z:0,w:5,d:5,c:"#5b9bc4",role:"Терапевт"}, proc:{x:5,z:0,w:5,d:5,c:"#3fae9e",role:"Медсестра"},
+  lab:{x:10,z:0,w:5,d:5,c:"#3d6fb5",role:"Лаборант"}, pharm:{x:15,z:0,w:5,d:5,c:"#58a867",role:"Фармацевт"},
+  us:{x:20,z:0,w:5,d:5,c:"#8a7bc8",role:"Врач УЗИ"}, icu:{x:25,z:0,w:5,d:5,c:"#d1585f",role:"Реаниматолог"},
+  xray:{x:0,z:8,w:6,d:8,c:"#6d7f94",role:"Рентгенолог"}, ward:{x:6,z:8,w:6,d:8,c:"#e0a458",role:"Медсестра"},
+  op:{x:12,z:8,w:6,d:8,c:"#2f9e9a",role:"Хирург"}, reg:{x:18,z:8,w:12,d:8,c:"#d9b27c",role:"Администратор"}
+};
+function roomOf(id){ return ROOMS.filter(function(r){ return r.id === id; })[0]; }
+function staffN(id){ return (S.staff && S.staff[id]) || 0; }
+function hireCost(r){ return Math.round((r.tiers[0][1]*0.4 + 250) * (staffN(r.id)+1) / 10) * 10; }
+function stop3d(){ if (!T3) return; cancelAnimationFrame(T3.raf); T3.off(); try { T3.r.dispose(); } catch(e){} T3 = null; }
+function loadScript(src){ return new Promise(function(res, rej){ var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = function(){ s.remove(); rej(new Error(src)); }; document.head.appendChild(s); }); }
 function ensureThree(){
-  if (window.THREE && THREE.OrbitControls) return Promise.resolve();
-  return loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js").then(function(){
-    return loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js");
-  });
+  if (window.THREE) return Promise.resolve();
+  var u = ["https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js","https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js","https://unpkg.com/three@0.128.0/build/three.min.js"];
+  return u.reduce(function(p, s){ return p.catch(function(){ return window.THREE ? 0 : loadScript(s); }); }, Promise.reject()).then(function(){ if (!window.THREE) throw new Error("three"); });
 }
 function init3d(el){
-  el.innerHTML = '<p class="rline" style="padding:12px">Загружаю 3D…</p>';
-  ensureThree().then(function(){
-    if (!document.body.contains(el)) return;
-    el.innerHTML = ""; run3d(el);
-  }).catch(function(){
-    el.innerHTML = '<p class="rline" style="padding:12px">Не удалось загрузить 3D. Переключитесь на схему.</p>';
-  });
+  el.innerHTML = '<p class="rline" style="padding:14px">Загружаю 3D-клинику…</p>';
+  ensureThree().then(function(){ if (!document.body.contains(el)) return; el.innerHTML = ""; run3d(el); })
+    .catch(function(){ el.innerHTML = '<p class="rline" style="padding:14px">Не удалось загрузить 3D (нужен интернет). Попробуйте позже.</p>'; });
 }
 
 function run3d(el){
-  var W = el.clientWidth || 340, H = Math.round(Math.min(640, W*1.35)), renderer;
-  try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
-  catch(e){ el.innerHTML = '<p class="rline" style="padding:12px">Этот браузер не поддерживает 3D. Используйте схему.</p>'; return; }
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-  renderer.setSize(W, H);
-  renderer.domElement.style.cssText = "display:block;width:100%;height:auto;border-radius:8px";
-  el.appendChild(renderer.domElement);
+  var W = el.clientWidth || 340, H = Math.round(Math.min(680, Math.max(460, W*1.12))), renderer;
+  try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance", precision: "highp" }); }
+  catch(e){ el.innerHTML = '<p class="rline" style="padding:14px">Этот браузер не поддерживает 3D.</p>'; return; }
+  renderer.setPixelRatio(Math.min(2.5, Math.max(1, window.devicePixelRatio || 1)));
+  renderer.setSize(W, H, false);
+  if (THREE.SRGBColorSpace) renderer.outputColorSpace = THREE.SRGBColorSpace; else if (THREE.sRGBEncoding) renderer.outputEncoding = THREE.sRGBEncoding;
+  if (THREE.ACESFilmicToneMapping) renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.18;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  var cv = renderer.domElement; cv.style.cssText = "display:block;width:100%;height:"+H+"px;touch-action:none;image-rendering:auto";
+  el.style.height = H+"px"; el.appendChild(cv);
+  var tl = document.createElement("div"); tl.className = "tools";
+  tl.innerHTML = '<button data-a="L" aria-label="Повернуть влево">⟲</button><button data-a="R" aria-label="Повернуть вправо">⟳</button><button data-a="+" aria-label="Приблизить">+</button><button data-a="-" aria-label="Отдалить">−</button><button data-a="H" aria-label="Общий вид">⌂</button>';
+  el.appendChild(tl);
 
-  var cs = getComputedStyle(document.documentElement);
-  function cv(n){ var v = cs.getPropertyValue(n).trim(); return new THREE.Color(v || "#888888"); }
-  var P = { sky:cv("--sky"), shell:cv("--shell"), wall:cv("--wall"), floor:cv("--floor"), floor2:cv("--floor2"), furn:cv("--furn"), furn2:cv("--furn2"),
-    coat:cv("--coat"), skin:cv("--skin"), ground:cv("--ground"), acc:cv("--accent"), gold:cv("--gold"), bad:cv("--bad"), good:cv("--good"), screen:cv("--screen") };
-  var INK = cs.getPropertyValue("--ink").trim() || "#111", INKACC = cs.getPropertyValue("--accent-ink").trim() || "#fff", ACC = cs.getPropertyValue("--accent").trim() || "#0b7a78";
+  var PAL = { wall:"#405d6d", wood:"#9b7049", woodD:"#62452f", furn:"#b5cbd4", glass:"#38a9c4", dark:"#172d3a", white:"#dcebf0", red:"#d65358", blue:"#287fc2", green:"#319b78", screen:"#061a25" };
+  var SKIN = ["#f0c9a6","#d9a77f","#b98259","#8f5e3f"], SHIRT = ["#d1585f","#e0a458","#58a867","#8a7bc8","#3fae9e","#5b9bc4"];
+  var scene = new THREE.Scene(), root = new THREE.Group(); root.position.set(-15, 0, -8); scene.add(root);
+  scene.add(new THREE.HemisphereLight(0x8ec8df, 0x07131d, .72));
+  var fillLight = new THREE.DirectionalLight(0x56c6e2, .48); fillLight.position.set(18, 14, -12); scene.add(fillLight);
+  var sun = new THREE.DirectionalLight(0xd6efff, 1.35); sun.position.set(-12, 28, 16); sun.castShadow = true;
+  sun.shadow.mapSize.set(3072, 3072); var sc = sun.shadow.camera; sc.left = -24; sc.right = 24; sc.top = 18; sc.bottom = -18; sc.near = 5; sc.far = 70; sun.shadow.bias = -.0006;
+  scene.add(sun);
+  var gr = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), new THREE.ShadowMaterial({ opacity: .38 })); gr.rotation.x = -Math.PI/2; gr.position.y = -.32; gr.receiveShadow = true; scene.add(gr);
+  var camera = new THREE.PerspectiveCamera(36, W/H, .5, 220);
 
-  var scene = new THREE.Scene(); scene.background = P.sky;
-  scene.add(new THREE.AmbientLight(0xffffff, 0.78));
-  var sun = new THREE.DirectionalLight(0xffffff, 0.65); sun.position.set(6, 18, 20); scene.add(sun);
-  var camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 200);
-  camera.position.set(6, 9.5, 26);
-  var controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 6.8, 0);
-  controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = 0.08;
-  controls.minDistance = 12; controls.maxDistance = 38;
-  controls.minPolarAngle = 0.6; controls.maxPolarAngle = 1.65;
-  controls.minAzimuthAngle = -1.2; controls.maxAzimuthAngle = 1.2;
-  controls.update();
+  var mats = {};
+  function M(c, o){ var k = c + (o ? JSON.stringify(o) : ""); if (!mats[k]){ var p = { color: c }; if (o) for (var q in o) p[q] = o[q]; p.shininess = 38; p.specular = new THREE.Color(0x526d7c); mats[k] = new THREE.MeshPhongMaterial(p); } return mats[k]; }
+  var BOXG = new THREE.BoxGeometry(1,1,1), CYLG = new THREE.CylinderGeometry(1,1,1,28), SPHG = new THREE.SphereGeometry(1,24,18), TORG = new THREE.TorusGeometry(1,.3,16,40), PLG = new THREE.PlaneGeometry(1,1);
+  function mk(g, geo, c, sx, sy, sz, x, y, z, o){ var m = new THREE.Mesh(geo, M(c, o)); m.scale.set(sx,sy,sz); m.position.set(x,y,z); m.castShadow = !(o && o.transparent); m.receiveShadow = true; g.add(m); return m; }
+  function bx(g,w,h,d,c,x,y,z,o){ return mk(g,BOXG,c,w,h,d,x,y+h/2,z,o); }
+  function cy(g,r,h,c,x,y,z){ return mk(g,CYLG,c,r,h,r,x,y+h/2,z); }
+  function sp(g,r,c,x,y,z){ return mk(g,SPHG,c,r,r,r,x,y,z); }
+  function grp(g,x,z,ry,y){ var o = new THREE.Group(); o.position.set(x,y||0,z); o.rotation.y = ry||0; g.add(o); return o; }
+  function mix(a,b,f){ return "#"+new THREE.Color(a).lerp(new THREE.Color(b),f).getHexString(); }
+  var anims = [], cur = null; function an(f){ f.o = cur; anims.push(f); }
+  var ec = document.createElement("canvas"); ec.width = 768; ec.height = 192; var ex = ec.getContext("2d");
+  ex.fillStyle = PAL.screen; ex.fillRect(0,0,256,64); ex.strokeStyle = "#52d58a"; ex.lineWidth = 7; ex.beginPath(); ex.moveTo(0,108);
+  [0,384].forEach(function(o){ ex.lineTo(o+90,108); ex.lineTo(o+114,42); ex.lineTo(o+144,168); ex.lineTo(o+174,72); ex.lineTo(o+198,108); ex.lineTo(o+384,108); }); ex.stroke();
+  var ecgTex = new THREE.CanvasTexture(ec); ecgTex.wrapS = THREE.RepeatWrapping; var ecgMat = new THREE.MeshBasicMaterial({ map: ecgTex });
+  function scr(g,w,h,x,y,z,ry){ var m = new THREE.Mesh(PLG, ecgMat); m.scale.set(w,h,1); m.position.set(x,y,z); m.rotation.y = ry||0; g.add(m); return m; }
+  function led(g,x,y,z,c){ var m = new THREE.Mesh(SPHG, new THREE.MeshBasicMaterial({ color: c })); m.scale.set(.06,.06,.06); m.position.set(x,y,z); g.add(m); an(function(t){ m.visible = Math.sin(t*3 + x) > -.2; }); }
 
-  var mats = {}, anims = [];
-  function M(c){ var k = c.getHexString(); return mats[k] || (mats[k] = new THREE.MeshLambertMaterial({ color: c })); }
-  var BOX = new THREE.BoxGeometry(1,1,1), CYL = new THREE.CylinderGeometry(1,1,1,14), SPH = new THREE.SphereGeometry(1,12,10), PLANE = new THREE.PlaneGeometry(1,1);
-  function bx(g,w,h,d,c,x,y,z){ var m = new THREE.Mesh(BOX, M(c)); m.scale.set(w,h,d); m.position.set(x, y+h/2, z); g.add(m); return m; }
-  function cy(g,r,h,c,x,y,z){ var m = new THREE.Mesh(CYL, M(c)); m.scale.set(r,h,r); m.position.set(x, y+h/2, z); g.add(m); return m; }
-  function sp(g,r,c,x,y,z){ var m = new THREE.Mesh(SPH, M(c)); m.scale.set(r,r,r); m.position.set(x,y,z); g.add(m); return m; }
+  /* ----- мебель и оборудование ----- */
+  function bed(g,x,z,ry,c){ var o = grp(g,x,z,ry); bx(o,1,.4,2.1,PAL.dark,0,.1,0); bx(o,.9,.16,1.9,PAL.white,0,.5,0); bx(o,.7,.1,.4,c||PAL.blue,0,.66,.7); bx(o,.9,.5,.08,PAL.dark,0,.1,-1.05); return o; }
+  function desk(g,x,z,ry){ var o = grp(g,x,z,ry); bx(o,1.7,.07,.75,PAL.wood,0,.74,0); bx(o,.08,.74,.65,PAL.woodD,-.78,0,0); bx(o,.08,.74,.65,PAL.woodD,.78,0,0); bx(o,.6,.4,.05,PAL.dark,0,.84,-.15); scr(o,.5,.3,0,1.04,-.12); return o; }
+  function chair(g,x,z,ry,c){ var o = grp(g,x,z,ry); cy(o,.22,.06,c||PAL.dark,0,.45,0); cy(o,.04,.45,PAL.dark,0,0,0); bx(o,.4,.5,.06,c||PAL.dark,0,.5,-.2); }
+  function cab(g,x,z,ry,w,h,c){ var o = grp(g,x,z,ry); bx(o,w,h,.5,c||PAL.furn,0,0,0); bx(o,w-.12,h-.35,.03,PAL.glass,0,.18,.26,{ transparent:true, opacity:.7 }); }
+  function plant(g,x,z,s){ s = s||1; cy(g,.2*s,.35*s,PAL.woodD,x,0,z); sp(g,.32*s,PAL.green,x,.7*s,z); sp(g,.22*s,"#6dbb73",x+.1*s,.95*s,z); }
+  function bench(g,x,z,ry,len,c){ var o = grp(g,x,z,ry); bx(o,len,.16,.5,c||PAL.red,0,.42,0); bx(o,len,.45,.1,c||PAL.red,0,.55,-.22); bx(o,.08,.42,.4,PAL.dark,-len/2+.1,0,0); bx(o,.08,.42,.4,PAL.dark,len/2-.1,0,0); }
+  function cart(g,x,z,ry,c){ var o = grp(g,x,z,ry); bx(o,.55,.85,.45,c||PAL.dark,0,0,0); scr(o,.42,.26,0,.62,.235); }
+  function iv(g,x,z){ cy(g,.03,1.7,PAL.dark,x,0,z); bx(g,.2,.3,.06,PAL.glass,x,1.4,z,{ transparent:true, opacity:.8 }); }
+  function shelf(g,x,z,ry,w,rows){ var o = grp(g,x,z,ry); bx(o,w,rows*.45+.2,.4,PAL.furn,0,0,0); for (var i=0;i<rows;i++) for (var j=0;j<Math.floor(w/.35);j++) bx(o,.22,.26,.2,["#d1585f","#3d6fb5","#58a867","#e0a458"][(i+j)%4],-w/2+.3+j*.35,.28+i*.45,.12); }
+  function ct(g,x,z,ry){ var o = grp(g,x,z,ry); mk(o,TORG,PAL.white,.95,.95,.95,0,1.15,0); bx(o,.8,.5,2.6,PAL.dark,0,0,.5); bx(o,.6,.1,2.2,PAL.white,0,.5,.5); led(o,.6,1.1,.3,0x52d58a); }
+  function arc(g,cx,cz,r,a0,a1,n,h,y,c){ for (var i=0;i<n;i++){ var a = a0+(a1-a0)*(i+.5)/n, o = grp(g,cx+Math.cos(a)*r,cz+Math.sin(a)*r,-(a+Math.PI/2)); bx(o,r*(a1-a0)/n*1.1,h,.5,c,0,y,0); } }
 
-  function ecgTexture(){
-    var c = document.createElement("canvas"); c.width = 256; c.height = 64;
-    var x = c.getContext("2d"); x.fillStyle = "#" + P.screen.getHexString(); x.fillRect(0,0,256,64);
-    x.strokeStyle = "#52d58a"; x.lineWidth = 3; x.lineJoin = "round"; x.beginPath(); x.moveTo(0,36);
-    [0,128].forEach(function(o){ x.lineTo(o+30,36); x.lineTo(o+38,14); x.lineTo(o+48,56); x.lineTo(o+58,24); x.lineTo(o+66,36); x.lineTo(o+128,36); });
-    x.stroke();
-    var t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; return t;
-  }
-  var ecgTex = ecgTexture(), ecgMat = new THREE.MeshBasicMaterial({ map: ecgTex });
-  function scr(g,w,h,x,y,z){ var m = new THREE.Mesh(PLANE, ecgMat); m.scale.set(w,h,1); m.position.set(x,y,z); g.add(m); return m; }
-  function led(g,x,y,z,c,ph){ var m = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: c })); m.scale.set(.06,.06,.06); m.position.set(x,y,z); g.add(m); anims.push(function(t){ m.visible = Math.sin(t*3 + (ph||0)) > -0.2; }); return m; }
-  function pr(g,x,z,c,mode,ph,range,y0){
-    var p = new THREE.Group(); y0 = y0 || 0; p.position.set(x,y0,z);
-    cy(p,.13,.45,P.furn2,0,0,0); cy(p,.2,.5,c,0,.45,0); sp(p,.17,P.skin,0,1.15,0);
-    g.add(p); ph = ph || 0;
-    if (mode === "walk") anims.push(function(t){ p.position.x = x + (Math.sin(t*.5+ph)*.5+.5)*(range||2); p.position.y = y0 + Math.abs(Math.sin(t*5+ph))*.03; });
-    else anims.push(function(t){ p.position.y = y0 + Math.abs(Math.sin(t*2+ph))*.04; });
-    return p;
-  }
-  function lie(g,x,y,z,c,alongZ){
-    var l = new THREE.Group(); l.position.set(x,y,z);
-    sp(l,.17,P.skin,-.55,.18,0); bx(l,.95,.2,.42,c,.05,.05,0);
-    if (alongZ) l.rotation.y = Math.PI/2;
-    g.add(l); return l;
-  }
-  function label(text, sub, w, h, big){
-    var c = document.createElement("canvas"); c.width = 512; c.height = sub ? 160 : 96; var x = c.getContext("2d");
-    x.textAlign = "center"; x.fillStyle = INK; x.font = "600 " + (big?46:40) + "px Onest, system-ui, sans-serif"; x.fillText(text, 256, sub ? 62 : 62);
-    if (sub){ x.font = "400 30px Onest, system-ui, sans-serif"; x.fillText(sub, 256, 116); }
-    var m = new THREE.Mesh(PLANE, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
-    m.scale.set(w,h,1); return m;
-  }
-
-  var RW = 5, RD = 4, CW = 1.4, FH = 2.9, WH = FH - 0.15;
-  var B = {
-   reg: function(g,t){
-    bx(g,2.2,.85,.7,P.furn2,-1,0,-.8); bx(g,2.3,.08,.8,P.furn,-1,.85,-.8); bx(g,.55,.38,.05,P.screen,-1.5,.93,-.85);
-    pr(g,-1,-1.5,P.coat,"bob",0);
-    if (t>=2) led(g,-.4,.92,-.75,P.acc,0);
-    if (t>=3){ pr(g,-1.9,-1.5,P.coat,"bob",1); bx(g,1,.35,.05,P.acc,1.4,1.8,-1.93); }
-    bx(g,2,.4,.5,P.furn,1.2,0,1.3); pr(g,.8,1.3,P.acc,"bob",.3,0,.3);
-    if (t>=2) pr(g,1.3,1.3,P.gold,"bob",1.1,0,.3);
-    if (t>=3) pr(g,1.8,1.3,P.acc,"bob",2,0,.3);
-   },
-   ther: function(g,t){
-    bx(g,1.8,.8,.7,P.furn2,.9,0,-1); bx(g,1.9,.07,.8,P.furn,.9,.8,-1); pr(g,.9,-1.6,P.coat,"bob",.5);
-    bx(g,.5,.4,.5,P.furn,-.9,0,-.3); pr(g,-.9,-.3,P.acc,"bob",.7,0,.3); bx(g,.3,.1,.2,P.gold,.4,.87,-1);
-    if (t>=2){ bx(g,.7,.8,.6,P.furn2,1.9,0,-.2); scr(g,.5,.3,1.9,.55,.11); }
-    if (t>=3){ bx(g,1.6,.9,.08,P.furn2,-1.4,1.3,-1.95); scr(g,1.4,.7,-1.4,1.75,-1.9); }
-   },
-   proc: function(g,t){
-    bx(g,2.3,.45,.9,P.furn,-.8,0,.2); lie(g,-1.1,.45,.2,P.acc); pr(g,.9,1.2,P.coat,"bob",0);
-    bx(g,1,1.7,.5,P.furn2,1.8,0,-1.7);
-    if (t>=2){ cy(g,.03,1.8,P.furn,.8,0,-.5); bx(g,.2,.3,.08,P.acc,.8,1.5,-.5); }
-    if (t>=3){ bx(g,.8,.5,.5,P.bad,1.8,0,-.9); bx(g,.4,.2,.04,P.screen,1.8,.25,-.64); led(g,2.1,.45,-.64,P.gold,0); }
-   },
-   lab: function(g,t){
-    bx(g,4.2,.9,.7,P.furn2,0,0,-1.55); bx(g,4.3,.07,.8,P.furn,0,.9,-1.55); pr(g,-1.2,-.7,P.coat,"bob",0);
-    bx(g,.08,.3,.08,P.bad,-.3,.97,-1.5); bx(g,.08,.3,.08,P.acc,-.15,.97,-1.5); bx(g,.08,.3,.08,P.gold,0,.97,-1.5);
-    cy(g,.3,.25,P.furn,.9,.97,-1.5); var rot = bx(g,.5,.05,.08,P.gold,.9,1.25,-1.5);
-    anims.push(function(t,dt){ rot.rotation.y += dt*8; });
-    if (t>=2){ bx(g,1,.8,.6,P.furn2,1.8,.97,-1.6); bx(g,.5,.3,.03,P.screen,1.8,1.3,-1.29); led(g,2.15,1.2,-1.29,P.good,0); }
-    if (t>=3){ bx(g,2.4,.06,.4,P.furn,-1,1.6,-1.8); led(g,-1.8,1.72,-1.7,P.acc,0); led(g,-1.2,1.72,-1.7,P.gold,1); led(g,-.6,1.72,-1.7,P.good,2); }
-   },
-   pharm: function(g,t){
-    var ys = t===1?[1.3]:t===2?[.8,1.5]:[.6,1.2,1.8], cl = [P.acc,P.gold,P.bad,P.furn];
-    ys.forEach(function(y,i){ bx(g,4.4,.05,.4,P.furn2,0,y,-1.8); for (var k=0;k<9;k++) bx(g,.3,.28,.25,cl[(k+i)%4],-2+k*.5,y+.05,-1.8); });
-    bx(g,3,.9,.6,P.furn2,.6,0,-.3); bx(g,3.1,.07,.7,P.furn,.6,.9,-.3); pr(g,.6,-.95,P.coat,"bob",0);
-    pr(g,-1.5,.6,P.acc,"bob",.7);
-    if (t>=3) bx(g,.5,.35,.05,P.screen,1.6,.97,-.3);
-   },
-   us: function(g,t){
-    bx(g,2.2,.5,.9,P.furn,-1,0,.2); lie(g,-1.3,.5,.2,P.acc); pr(g,.4,.8,P.coat,"bob",0);
-    bx(g,.8,1,.6,P.furn2,1.2,0,-.3); bx(g,.7,.45,.05,P.screen,1.2,1,-.3); scr(g,.6,.35,1.2,1.22,-.27);
-    if (t>=2){ led(g,1.5,.9,.02,P.bad,0); led(g,.9,.9,.02,P.acc,1); }
-    if (t>=3){ bx(g,1.6,.9,.08,P.furn2,-1.2,1.2,-1.95); scr(g,1.4,.7,-1.2,1.65,-1.9); }
-   },
-   xray: function(g,t){
-    if (t<3){
-     cy(g,.1,2.3,P.furn2,1.9,0,-1); bx(g,2.6,.12,.15,P.furn,.65,2.15,-1); bx(g,.5,.35,.4,P.furn2,-.4,1.85,-1);
-     bx(g,2.4,.4,.8,P.furn,-.4,0,-1); lie(g,-.7,.4,-1,P.acc);
-     var beam = new THREE.Mesh(new THREE.CylinderGeometry(.15,.6,1.1,14,1,true), new THREE.MeshBasicMaterial({ color: P.gold, transparent: true, opacity: .35, side: THREE.DoubleSide }));
-     beam.position.set(-.4,1.3,-1); g.add(beam);
-     anims.push(function(t){ beam.visible = (t % 3.2) > 2.9; });
-    } else {
-     var ring = new THREE.Mesh(new THREE.TorusGeometry(.95,.32,12,28), M(P.furn2)); ring.position.set(0,1.3,-.9); g.add(ring);
-     led(g,0,2.45,-.9,P.good,0); bx(g,.9,.35,3,P.furn,0,.35,.4);
-     var pat = lie(g,0,.7,.4,P.acc,true);
-     anims.push(function(t){ pat.position.z = .4 + Math.sin(t*.6)*.8; });
-    }
-    pr(g,2.1,1.3,P.coat,"bob",0);
-    if (t===2) bx(g,1.4,.04,.7,P.acc,-.4,.4,-1);
-   },
-   ward: function(g,t){
-    var xs = t===1?[-1.2,.6]:t===2?[-1.8,-.6,.6]:[-1.8,-.6,.6,1.8], cl = [P.acc,P.gold,P.good,P.acc];
-    xs.forEach(function(x,i){ bx(g,.85,.4,1.9,P.furn,x,0,-.9); lie(g,x,.4,-.9,cl[i%4],true); if (t>=3) bx(g,.4,.25,.05,P.screen,x,1.3,-1.93); });
-    pr(g,-1.8,1.4,P.coat,"walk",0,3.2);
-    if (t>=2){ bx(g,2,.9,.5,P.furn2,1.2,0,1.6); bx(g,.5,.3,.05,P.screen,1.6,.95,1.6); }
-   },
-   icu: function(g,t){
-    var xs = t===1?[-.8]:t===2?[-1.4,.8]:[-1.7,0,1.7];
-    xs.forEach(function(x){
-     bx(g,.9,.45,1.9,P.furn,x,0,-.9); lie(g,x,.45,-.9,P.acc,true);
-     bx(g,.7,.45,.06,P.furn2,x,1.4,-1.93); scr(g,.6,.35,x,1.62,-1.89); bx(g,.3,.5,.3,P.furn2,x+.7,0,-1);
-    });
-    pr(g, t===1 ? 1.4 : t===2 ? 2 : -.85, 1.3, P.coat, "bob", 0);
-   },
-   op: function(g,t){
-    cy(g,.15,.75,P.furn2,0,0,-.2); bx(g,2.1,.1,.9,P.furn,0,.75,-.2); lie(g,-.2,.85,-.2,P.acc);
-    pr(g,-1.2,.7,P.good,"bob",0); pr(g,1.2,.7,P.good,"bob",.8);
-    cy(g,.03,1,P.furn2,0,1.6,-.2);
-    var lamp = cy(g,.5,.1,P.gold,0,1.5,-.2);
-    var cone = new THREE.Mesh(new THREE.CylinderGeometry(.15,.9,1,14,1,true), new THREE.MeshBasicMaterial({ color: P.gold, transparent: true, opacity: .16, side: THREE.DoubleSide })); cone.position.set(0,1,-.2); g.add(cone);
-    anims.push(function(t){ cone.material.opacity = .12 + Math.sin(t*2)*.05; });
-    bx(g,1,.7,.06,P.furn2,1.8,1.2,-1.93); scr(g,.9,.55,1.8,1.55,-1.89);
-    if (t>=2){ bx(g,.7,1.5,.6,P.furn2,-2,0,-1.5); scr(g,.5,.35,-2,1.2,-1.19); }
-    if (t>=3){
-     [-.7,.7].forEach(function(x,i){
-      var pv = new THREE.Group(); pv.position.set(x,2.5,-.2); cy(pv,.06,1.6,P.furn,0,-1.6,0); g.add(pv);
-      anims.push(function(t){ pv.rotation.x = Math.sin(t*.9+i*1.5)*.12; });
-     });
-    }
-   }
+  var KIT = {
+    ther:function(g,t){ desk(g,0,-1.5,0); chair(g,0,-2.2,0,PAL.blue); chair(g,0,-.55,Math.PI,PAL.red); bed(g,-1.35,1.2,Math.PI/2); cab(g,2.25,-1.3,-Math.PI/2,1.4,1.6); plant(g,2.1,2.1);
+      if (t>=2) cart(g,1.5,.4,-Math.PI/2); if (t>=3){ bx(g,1.6,.9,.08,PAL.dark,-1.4,1.3,-2.44); scr(g,1.45,.75,-1.4,1.75,-2.39); cab(g,-2.25,-.4,Math.PI/2,1.2,1.4); } },
+    proc:function(g,t){ bed(g,-1.2,-.4,0); chair(g,.2,-.2,Math.PI/2); cab(g,1.5,-2.2,0,1.6,1.8); plant(g,2.1,2.1); if (t>=2) iv(g,-.55,-1.2); if (t>=3){ cart(g,1.6,.7,-Math.PI/2,PAL.red); led(g,1.45,.9,.7,0xff5555); } },
+    lab:function(g,t){ bx(g,4.4,.9,.7,PAL.furn,0,0,-2.1); bx(g,4.5,.05,.8,PAL.dark,0,.9,-2.1); cy(g,.28,.3,PAL.white,-1.6,.95,-2.1); cy(g,.3,.06,PAL.blue,-1.6,1.25,-2.1); chair(g,-1.6,-1.2,Math.PI);
+      if (t>=2){ bx(g,.9,.6,.6,PAL.white,0,.95,-2.1); scr(g,.5,.3,0,1.35,-1.79); led(g,.4,1.2,-1.79,0x4aa8ff); } if (t>=3){ bx(g,1.2,1.1,.9,PAL.white,1.6,0,-.2); bx(g,1,.12,.6,PAL.blue,1.6,.95,-.2); led(g,1.9,1.05,.27,0x52d58a); bx(g,.7,.9,.7,PAL.furn,1.6,0,1.5); } },
+    pharm:function(g,t){ for (var i=0;i<t+1;i++) shelf(g,-1.7+i*1.15,-2.2,0,1.05,3); bx(g,4,1,.7,PAL.wood,0,0,.7); bx(g,4.1,.06,.8,PAL.woodD,0,1,.7); bx(g,.5,.4,.05,PAL.dark,1.4,1.1,.7);
+      if (t>=2){ shelf(g,-2.25,-.6,Math.PI/2,1.8,3); shelf(g,2.25,-.6,-Math.PI/2,1.8,3); } if (t>=3){ bx(g,1.2,2,.7,PAL.dark,1.7,0,-1.6); scr(g,.8,.5,1.7,1.5,-1.24); led(g,2.2,1.9,-1.24,0x52d58a); } },
+    us:function(g,t){ bed(g,-1.2,-.3,0); cart(g,.6,-.4,Math.PI/2,PAL.white); chair(g,.6,.7,Math.PI,PAL.blue); cab(g,1.5,-2.2,0,1.5,1.7); plant(g,-2.1,2.1);
+      if (t>=2) scr(g,.7,.4,0,1.6,-2.38); if (t>=3){ bx(g,1,1.5,.7,PAL.white,1.7,0,.6); scr(g,.8,.5,1.7,1.2,.96); bx(g,.9,.1,.5,PAL.dark,1.7,1.5,.6); } },
+    icu:function(g,t){ var n = t===1?1:t===2?2:4, xs = t===1?[0]:t===2?[-.9,.9]:[-1.7,-.55,.55,1.7];
+      for (var i=0;i<n;i++){ bed(g,xs[i],-1.2,0,PAL.red); scr(g,.5,.3,xs[i],1.6,-2.4); iv(g,xs[i]+.55,-.5); } if (t>=3){ desk(g,0,1.5,Math.PI); chair(g,0,2.2,Math.PI); } plant(g,2.2,2.1); },
+    xray:function(g,t){ bed(g,-.8,-1.8,0); bx(g,.5,.5,.5,PAL.white,-.8,2,-1.8); bx(g,.1,.1,3,PAL.dark,-.8,2.6,-1.2); bx(g,1.5,2,.06,PAL.glass,2,0,0,{ transparent:true, opacity:.55 }); desk(g,2.2,-.9,-Math.PI/2); chair(g,1.5,-.9,-Math.PI/2);
+      if (t>=2){ bx(g,.9,1.6,.15,PAL.dark,-2.4,0,-1.6); scr(g,.7,.5,-2.4,1.2,-1.52); } if (t>=3){ ct(g,-.8,-1.4,0); } plant(g,2.3,3.2); },
+    ward:function(g,t){ var xs = t<3?(t===1?[-1.5,1.5]:[-2.2,-.75,.75,2.2]):[-2.2,-.75,.75,2.2];
+      xs.forEach(function(x){ bed(g,x,-2.9,0); iv(g,x+.6,-2); }); if (t>=3) xs.forEach(function(x){ bed(g,x,.6,0,PAL.green); }); if (t>=2){ desk(g,2,3,Math.PI); chair(g,2,3.7,Math.PI); } plant(g,-2.4,3.2); },
+    op:function(g,t){ bed(g,0,-.3,0,PAL.green); cy(g,.04,1.3,PAL.white,0,1.2,-.3); cy(g,.5,.1,PAL.white,0,2.5,-.3); cy(g,.3,.1,"#fff7c2",.9,2.3,-.3); cab(g,-2.3,-1.5,Math.PI/2,1.6,1.7); cart(g,1.3,.9,-Math.PI/2,PAL.white);
+      if (t>=2){ bx(g,.7,1.7,.6,PAL.dark,2.2,0,-1.5); scr(g,.5,.35,2.2,1.5,-1.19); scr(g,.5,.35,2.2,1,-1.19); } if (t>=3){ bx(g,.8,.4,.8,PAL.white,-1.8,0,.5); cy(g,.09,1.5,PAL.white,-1.8,.4,.5); var a = cy(g,.07,1.2,PAL.white,-1.3,1.6,.5); a.rotation.z = 1.2; var b = cy(g,.07,1.2,PAL.white,-1.3,1.4,.2); b.rotation.z = 1.2; led(g,-1.8,1.95,.5,0x4aa8ff); } },
+    reg:function(g,t){ arc(g,-4.4,-.4,2,-1.1,1.1,7,1,0,PAL.wood); arc(g,-4.4,-.4,2,-1.1,1.1,7,.06,1,PAL.woodD); bx(g,.5,.4,.05,PAL.dark,-3.3,1.1,-.4); cy(g,.25,.4,PAL.blue,-4.4,0,-.4);
+      bx(g,.7,.9,3.6,PAL.blue,5.2,0,.4); bx(g,.2,.7,3.6,PAL.blue,5.55,.5,.4); bx(g,4,.03,2.4,"#b7a77a",2.2,0,1.2); bx(g,3.2,.03,2,"#9fb08a",-1.4,0,2.6);
+      bench(g,2.2,2.5,Math.PI,3,PAL.red); bench(g,1.2,.3,0,2.6,PAL.red); plant(g,5.4,-3.4,1.2); plant(g,-5.5,3.4); plant(g,5.5,3.4);
+      if (t>=2){ bx(g,.5,1.3,.35,PAL.blue,-1.4,0,-3.4); scr(g,.4,.3,-1.4,1.0,-3.21); bench(g,-1.6,3,Math.PI,2.4,PAL.red); led(g,-1.4,1.2,-3.2,0x52d58a); }
+      if (t>=3){ desk(g,3,-3.3,0); desk(g,4.9,-3.3,0); chair(g,3,-3.9,0,PAL.blue); chair(g,4.9,-3.9,0,PAL.blue); bx(g,2,1,.06,PAL.dark,2,1.5,3.95); scr(g,1.85,.85,2,1.97,3.9,Math.PI); plant(g,-5.5,-3.4,1.1); bench(g,-3.5,3,Math.PI,2.2,PAL.red); } }
   };
-  var POS3 = { op:[0,4], icu:[1,4], ward:[0,3], xray:[1,3], us:[0,2], lab:[1,2], pharm:[0,1], proc:[1,1], reg:[0,0], ther:[1,0] };
 
-  var root = new THREE.Group(); scene.add(root);
-  var gnd = bx(root, 70, .4, 30, P.ground, 0, -.6, 6);
-  var totalW = 2*RW + CW;
-  for (var f=0; f<=5; f++) bx(root, totalW+.4, .15, RD+.4, P.floor, 0, f*FH - .15, 0);
-  for (var f2=0; f2<5; f2++){
-    var y0 = f2*FH;
-    bx(root, totalW, WH, .12, P.wall, 0, y0, -RD/2 - .06);
-    bx(root, .12, WH, RD, P.shell, -totalW/2 - .06, y0, 0); bx(root, .12, WH, RD, P.shell, totalW/2 + .06, y0, 0);
-    [-1,1].forEach(function(sd){ bx(root, .1, WH, 1.6, P.shell, sd*CW/2, y0, -1.2); bx(root, .1, WH, 1.2, P.shell, sd*CW/2, y0, 1.4); });
+  /* ----- люди ----- */
+  function person(g,x,z,coat,skin,hat){ var p = new THREE.Group(); p.position.set(x,0,z); bx(p,.3,.5,.2,"#3d4654",0,0,0); cy(p,.19,.55,coat,0,.5,0); sp(p,.16,skin,0,1.2,0); if (hat) bx(p,.3,.08,.3,hat,0,1.33,0); g.add(p); return p; }
+  function rnd(a){ return a[Math.floor(Math.random()*a.length)]; }
+
+  /* ----- стены с «вырезом» на стороне камеры ----- */
+  var lowW = false, walls = [], picks = [], R = {}, tags = [];
+  function wall(g,own,x1,z1,x2,z2,outer,nx,nz,door,dw){
+    var horiz = z1 === z2, a0 = horiz ? Math.min(x1,x2) : Math.min(z1,z2), a1 = a0 + Math.abs(horiz ? x2-x1 : z2-z1), H = outer ? 2.7 : 1.5, segs = [[a0,a1]];
+    if (door !== null){ segs = [[a0,door-dw/2],[door+dw/2,a1]]; }
+    segs.forEach(function(s, k){
+      var len = s[1]-s[0], c = (s[0]+s[1])/2, wg = new THREE.Group(); wg.position.set(horiz?c:x1, 0, horiz?z1:c); g.add(wg);
+      bx(wg,horiz?len:.2,H,horiz?.2:len,PAL.wall,0,0,0); bx(wg,horiz?len:.28,.06,horiz?.28:len,"#ffffff",0,H,0);
+      if (door !== null){ var pe = k===0 ? len/2 : -len/2; bx(wg,horiz?.14:.28,H,horiz?.28:.14,PAL.wood,horiz?pe:0,0,horiz?0:pe); }
+      if (outer){ var n = Math.floor(len/2.6); for (var i=0;i<n;i++){ var o = (i-(n-1)/2)*2.6; bx(wg,horiz?1.5:.26,1,horiz?.26:1.5,PAL.glass,horiz?o:0,1,horiz?0:o,{ transparent:true, opacity:.75 }); } }
+      if (lowW) wg.scale.y = .3;
+      walls.push({ g:wg, nx:nx, nz:nz, outer:outer, own:own });
+    });
   }
-  var lvl = levelOf(S.xp);
-  ROOMS.forEach(function(r){
-    var pos = POS3[r.id], t = tier(r.id), g = new THREE.Group();
-    g.position.set((pos[0]===0?-1:1)*(CW/2 + RW/2), pos[1]*FH, 0); root.add(g);
-    if (t === 0){
-      var edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(RW-.1, WH-.1, RD-.1)), new THREE.LineBasicMaterial({ color: P.furn, transparent: true, opacity: .7 }));
-      edges.position.set(0, WH/2, 0); g.add(edges);
-      var lb = label("Свободное помещение", lvl >= r.min ? "Можно построить" : "Откроется на уровне "+r.min, 3.8, 1.2, false); lb.position.set(0,1.4,-1.85); g.add(lb);
+  function tagSprite(txt,sub,col){
+    var cn = document.createElement("canvas"); cn.width = 1024; cn.height = 280; var x = cn.getContext("2d");
+    x.shadowColor = "rgba(0,220,245,.28)"; x.shadowBlur = 18; x.fillStyle = "rgba(4,24,36,.97)"; x.beginPath(); x.moveTo(60,12); x.arcTo(1012,12,1012,268,56); x.arcTo(1012,268,12,268,56); x.arcTo(12,268,12,12,56); x.arcTo(12,12,1012,12,56); x.fill(); x.shadowBlur = 0;
+    x.lineWidth = 7; x.strokeStyle = "#16c4d8"; x.stroke(); x.fillStyle = col; x.fillRect(12,12,36,256); x.textAlign = "center"; x.fillStyle = "#f0fbff"; x.font = "700 88px system-ui,sans-serif"; x.fillText(txt,536,124); x.fillStyle = "#62d9e8"; x.font = "600 64px system-ui,sans-serif"; x.fillText(sub,536,216);
+    var s = new THREE.Sprite(new THREE.SpriteMaterial({ map:new THREE.CanvasTexture(cn), depthTest:false, transparent:true })); s.scale.set(3.4,.93,1); s.renderOrder = 5; return s;
+  }
+
+  /* ----- комната ----- */
+  function buildRoom(id, grow){
+    var r = roomOf(id), L = LAY[id], t = tier(id), lvl = levelOf(S.xp), locked = t===0 && lvl < r.min;
+    if (R[id]){ root.remove(R[id].g); }
+    anims = anims.filter(function(a){ return a.o !== id; }); cur = id;
+    walls = walls.filter(function(o){ return o.own !== id; }); picks = picks.filter(function(o){ return o.userData.rid !== id; }); tags = tags.filter(function(o){ return o.rid !== id; });
+    var g = new THREE.Group(); g.position.set(L.x+L.w/2, 0, L.z+L.d/2); root.add(g);
+    var w = L.w, d = L.d, hw = w/2, hd = d/2, top = L.z > 0 ? -1 : 1;
+    var fl = bx(g,w,.1,d,t>0 ? "#263f4d" : "#172b38",0,-.09,0); fl.userData.rid = id; picks.push(fl);
+    var body = new THREE.Group(); g.add(body);
+    if (t>0){
+      bx(g,w-.9,.025,d-.9,mix(L.c,"#173342",.22),0,.0,0);
+      var kg = (L.z > 0 && id !== "reg") ? grp(body,0,0,Math.PI) : body; KIT[id](kg,t);
+      var spots = [[-w*.28,0],[w*.28,0],[0,0]], zz = top*(hd-1.1);
+      for (var i=0;i<staffN(id);i++){ var sp2 = spots[i], pp = person(body,id==="reg"?-5.3:sp2[0],id==="reg"?-1.5+i*1.1:zz,"#ffffff",SKIN[(i+id.length)%4],L.c); pp.rotation.y = id==="reg"?Math.PI/2:(top>0?Math.PI:0); (function(p,ph){ an(function(tt){ p.position.y = Math.abs(Math.sin(tt*2+ph))*.03; }); })(pp,i); }
     } else {
-      bx(g, RW, .03, RD, P.floor2, 0, 0, 0);
-      B[r.id](g, t);
-      var nm = label(r.name, "", 2.4, .45, false); nm.position.set(-1.3, WH - .3, -1.92); g.add(nm);
+      [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(function(c){ bx(g,.12,1.7,.12,"#e8b923",c[0]*(hw-.1),0,c[1]*(hd-.1)); });
+      bx(g,w,.04,.14,"#e8b923",0,0,-hd+.07); bx(g,w,.04,.14,"#e8b923",0,0,hd-.07); bx(g,.14,.04,d,"#e8b923",-hw+.07,0,0); bx(g,.14,.04,d,"#e8b923",hw-.07,0,0);
     }
-  });
-  /* лифт */
-  var cab = new THREE.Group(); root.add(cab);
-  bx(cab, 1, 2.2, 1, P.furn2, 0, 0, -1.2); bx(cab, .7, 1.2, .05, P.coat, 0, .6, -.68);
-  anims.push(function(t){ cab.position.y = (Math.sin(t*.35)*.5+.5)*4*FH; });
-  /* вывеска */
-  var sg = new THREE.Group(); sg.position.set(0, 5*FH + .9, -1.4); root.add(sg);
-  bx(sg, 7, 1.2, .2, P.acc, 0, -.6, 0);
-  var sc = document.createElement("canvas"); sc.width = 700; sc.height = 120; var sx = sc.getContext("2d");
-  sx.fillStyle = INKACC; sx.textAlign = "center"; sx.font = "600 52px Unbounded, Onest, system-ui, sans-serif"; sx.fillText(S.name, 350, 78, 640);
-  var sm = new THREE.Mesh(PLANE, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true })); sm.scale.set(7,1.2,1); sm.position.set(0,0,.12); sg.add(sm);
-  /* скорая */
-  var amb = new THREE.Group(); amb.position.set(0,-.2,5); root.add(amb);
-  bx(amb, 2.6, 1.1, 1.1, P.coat, 0, .3, 0); bx(amb, .9, .8, 1.05, P.coat, 1.6, .3, 0);
-  bx(amb, .8, .12, .02, P.bad, -.3, .8, .56); bx(amb, .12, .6, .02, P.bad, -.3, .56, .56);
-  cy(amb,.28,.2,P.furn2,-.8,.05,.5); cy(amb,.28,.2,P.furn2,1.2,.05,.5);
-  var beacon = led(amb, 0, 1.5, 0, P.bad, 0);
-  anims.push(function(t){ amb.position.x = ((t*1.6) % 36) - 18; });
-
-  var still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var clock = new THREE.Clock();
-  T3 = { renderer: renderer, controls: controls, raf: 0, onResize: null };
-  T3.onResize = function(){ var w = el.clientWidth || W; renderer.setSize(w, Math.round(Math.min(640, w*1.35))); camera.aspect = w / Math.round(Math.min(640, w*1.35)); camera.updateProjectionMatrix(); };
-  window.addEventListener("resize", T3.onResize);
-  function frame(){
-    if (!T3) return;
-    T3.raf = requestAnimationFrame(frame);
-    var dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
-    if (!still){ for (var i=0;i<anims.length;i++) anims[i](t,dt); ecgTex.offset.x = -((t*.35) % 1); }
-    controls.update(); renderer.render(scene, camera);
+    var oW = L.x === 0, oE = L.x+L.w === 30, oN = L.z === 0, oS = L.z+L.d === 16, built = t > 0;
+    lowW = !built;
+    function W(x1,z1,x2,z2,o,nx,nz,dr,dw){ if (!built){ o = false; } wall(g,id,x1,z1,x2,z2,o,nx,nz,dr,dw); }
+    var doorN = L.z > 0, doorS = !doorN && id !== "reg";
+    W(-hw,-hd,hw,-hd,oN,0,-1,doorN ? 0 : null,1.8); W(-hw,hd,hw,hd,oS,0,1,doorS ? 0 : (id==="reg" ? 0 : null),id==="reg"?3:1.8);
+    W(-hw,-hd,-hw,hd,oW,-1,0,null); W(hw,-hd,hw,hd,oE,1,0,null);
+    var tg = tagSprite(locked ? "Нужен уровень "+r.min : (t>0 ? r.name : "Построить: "+r.name), locked ? TITLES[r.min-1] : (t>0 ? "ур. "+t+" · "+fmt(r.inc[t-1]*(1+.15*staffN(id)))+" ₽/ч" : (r.tiers[0][1] ? fmt(r.tiers[0][1])+" ₽" : "бесплатно")), L.c);
+    tg.position.set(0, 3.6, 0); g.add(tg); tags.push({ rid:id, s:tg });
+    if (grow){ g.scale.y = .02; var t0 = performance.now(); an(function f(){ var k = Math.min(1,(performance.now()-t0)/700); g.scale.y = .02+.98*(1-Math.pow(1-k,3)); if (k>=1){ var i = anims.indexOf(f); if (i>=0) anims.splice(i,1); } }); }
+    R[id] = { g:g };
   }
+
+  /* ----- общий корпус ----- */
+  bx(root,32,.3,18,"#142b39",15,-.31,8).receiveShadow = true; bx(root,30,.1,3,"#274657",15,-.09,6.5);
+  wall(root,"base",0,5,0,8,true,-1,0,null); wall(root,"base",30,5,30,8,true,1,0,null);
+  for (var ci=0;ci<4;ci++) bx(root,.5,.025,2.6,"#19a9bd",3+ci*8,.0,6.5);
+  plant(root,1,6.5); plant(root,29,6.5); bench(root,9,6.0,0,2.2,PAL.blue); bench(root,19,7.0,Math.PI,2.2,PAL.blue);
+  ROOMS.forEach(function(r){ buildRoom(r.id,false); });
+
+  /* ----- пациенты ----- */
+  var pts = [], nextSpawn = 1;
+  function builtList(){ return ROOMS.filter(function(r){ return tier(r.id)>0 && r.id !== "reg"; }); }
+  function spawn(){
+    var bl = builtList(), sx = 22.5+Math.random()*3, p = person(root,sx,17.8,rnd(SHIRT),rnd(SKIN),null);
+    var path = [[sx,14,0],[20+Math.random()*8,11.2+Math.random()*3.4,2+Math.random()*4]];
+    if (bl.length){ var r = rnd(bl), L = LAY[r.id], dx = L.x+L.w/2, inZ = L.z>0 ? L.z+1.8 : L.z+L.d-1.6; path.push([24,8.8,0],[24,6.5,0],[dx,6.5,0],[dx,inZ,4+Math.random()*5],[dx,6.5,0],[24,6.5,0],[24,8.8,0]); }
+    path.push([sx,14,0],[sx,17.9,0]); pts.push({ m:p, path:path, i:0, wait:0 });
+  }
+  function movePeople(dt){
+    nextSpawn -= dt; var cap = Math.min(12, 3 + builtList().length*1.2);
+    if (nextSpawn <= 0){ nextSpawn = 2.5+Math.random()*2.5; if (pts.length < cap) spawn(); }
+    for (var i=pts.length-1;i>=0;i--){
+      var o = pts[i], tg = o.path[o.i]; if (!tg){ root.remove(o.m); pts.splice(i,1); continue; }
+      var dx = tg[0]-o.m.position.x, dz = tg[1]-o.m.position.z, dd = Math.sqrt(dx*dx+dz*dz);
+      if (o.wait > 0){ o.wait -= dt; continue; }
+      if (dd < .08){ o.wait = tg[2]; o.i++; continue; }
+      var st = Math.min(dd, 1.7*dt); o.m.position.x += dx/dd*st; o.m.position.z += dz/dd*st; o.m.rotation.y = Math.atan2(dx,dz); o.m.position.y = Math.abs(Math.sin(performance.now()/110+i))*.04;
+    }
+  }
+
+  /* ----- выбранная комната ----- */
+  var selM = new THREE.Mesh(BOXG, new THREE.MeshBasicMaterial({ color:0x2aa9ff, transparent:true, opacity:.28, depthWrite:false })); selM.visible = false; root.add(selM);
+  function mark(id){ if (!id){ selM.visible = false; return; } var L = LAY[id]; selM.visible = true; selM.scale.set(L.w-.1,.06,L.d-.1); selM.position.set(L.x+L.w/2,.08,L.z+L.d/2); }
+
+  /* ----- камера ----- */
+  var cam = { tx:0, tz:1, yaw:.62, dist:58 }, goal = { tx:0, tz:1, yaw:.62, dist:58 }, PIT = .92;
+  function clampG(){ goal.tx = Math.max(-16,Math.min(16,goal.tx)); goal.tz = Math.max(-9,Math.min(9,goal.tz)); goal.dist = Math.max(14,Math.min(64,goal.dist)); }
+  function focus(id){ var L = LAY[id]; goal.tx = L.x+L.w/2-15; goal.tz = L.z+L.d/2-8; goal.dist = Math.min(goal.dist,30); clampG(); }
+  var ptr = {}, tapT = 0, moved = 0;
+  function dist2(a,b){ return Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y)); }
+  function ang2(a,b){ return Math.atan2(b.y-a.y,b.x-a.x); }
+  var ray = new THREE.Raycaster(), v2 = new THREE.Vector2();
+  function pick(e){
+    var rc = cv.getBoundingClientRect(); v2.set((e.clientX-rc.left)/rc.width*2-1, -((e.clientY-rc.top)/rc.height)*2+1); ray.setFromCamera(v2,camera);
+    var h = ray.intersectObjects(picks,false)[0]; if (h) selectRoom(h.object.userData.rid, true);
+  }
+  cv.addEventListener("pointerdown", function(e){ try { cv.setPointerCapture(e.pointerId); } catch(x){} ptr[e.pointerId] = { x:e.clientX, y:e.clientY }; if (Object.keys(ptr).length === 1){ tapT = Date.now(); moved = 0; } else moved = 99; });
+  cv.addEventListener("pointermove", function(e){
+    var p = ptr[e.pointerId]; if (!p) return; var ids = Object.keys(ptr), nx = { x:e.clientX, y:e.clientY };
+    if (ids.length === 1){
+      var dx = nx.x-p.x, dy = nx.y-p.y; moved += Math.abs(dx)+Math.abs(dy); var k = cam.dist*.0016, fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
+      goal.tx -= (rx*dx - fx*dy)*k; goal.tz -= (rz*dx - fz*dy)*k; clampG(); cam.tx = goal.tx; cam.tz = goal.tz;
+    } else {
+      var a = ptr[ids[0]], b = ptr[ids[1]], d0 = dist2(a,b), g0 = ang2(a,b); p.x = nx.x; p.y = nx.y; var d1 = dist2(a,b), g1 = ang2(a,b);
+      if (d1 > 10 && d0 > 10) goal.dist *= d0/d1; var da = g1-g0; if (da > Math.PI) da -= 2*Math.PI; if (da < -Math.PI) da += 2*Math.PI; goal.yaw += da; clampG();
+    }
+    p.x = nx.x; p.y = nx.y;
+  });
+  function up(e){ var single = Object.keys(ptr).length === 1; delete ptr[e.pointerId]; if (e.type === "pointerup" && single && moved < 10 && Date.now()-tapT < 450) pick(e); }
+  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+  cv.addEventListener("wheel", function(e){ e.preventDefault(); goal.dist *= e.deltaY > 0 ? 1.1 : .9; clampG(); }, { passive:false });
+  tl.onclick = function(e){ var a = e.target.getAttribute && e.target.getAttribute("data-a"); if (a === "L") goal.yaw -= Math.PI/2; else if (a === "R") goal.yaw += Math.PI/2; else if (a === "+") goal.dist *= .8; else if (a === "-") goal.dist *= 1.25; else if (a === "H"){ goal.tx = 0; goal.tz = 1; goal.dist = 58; } clampG(); };
+  function onResize(){ var w = el.clientWidth; if (!w) return; renderer.setPixelRatio(Math.min(2.5, Math.max(1, window.devicePixelRatio || 1))); renderer.setSize(w,H,false); camera.aspect = w/H; camera.updateProjectionMatrix(); }
+  window.addEventListener("resize", onResize);
+
+  var clock = new THREE.Clock();
+  function frame(){
+    if (!T3) return; T3.raf = requestAnimationFrame(frame);
+    var dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime, e = Math.min(1, dt*9);
+    cam.tx += (goal.tx-cam.tx)*e; cam.tz += (goal.tz-cam.tz)*e; cam.yaw += (goal.yaw-cam.yaw)*e; cam.dist += (goal.dist-cam.dist)*e;
+    var cp = Math.cos(PIT); camera.position.set(cam.tx+cam.dist*cp*Math.sin(cam.yaw), cam.dist*Math.sin(PIT), cam.tz+cam.dist*cp*Math.cos(cam.yaw)); camera.lookAt(cam.tx,0,cam.tz);
+    var cxn = Math.sin(cam.yaw), czn = Math.cos(cam.yaw);
+    for (var i=0;i<walls.length;i++){ var w = walls[i]; if (!w.outer) continue; var s = (w.nx*cxn+w.nz*czn) > .25 ? .1 : 1; w.g.scale.y += (s-w.g.scale.y)*e; }
+    var k = Math.max(.55, Math.min(1.3, cam.dist/34)); for (var j=0;j<tags.length;j++) tags[j].s.scale.set(3.4*k,.93*k,1);
+    for (var a=0;a<anims.length;a++) anims[a](t,dt); ecgTex.offset.x = -((t*.35)%1); selM.material.opacity = .22+.1*Math.sin(t*4);
+    movePeople(dt); renderer.render(scene, camera);
+  }
+  T3 = { raf:0, r:renderer, off:function(){ window.removeEventListener("resize", onResize); }, refresh:function(id){ buildRoom(id,true); }, focus:focus, mark:mark };
+  if (SEL){ mark(SEL); focus(SEL); }
   frame();
+  function selectRoom(id){ SEL = id; mark(id); focus(id); sheet(); }
 }
 
-/* ===== Клиника ===== */
+/* ===== Клиника: интерфейс и экономика ===== */
+function stats(){
+  var rooms = 0, stf = 0; ROOMS.forEach(function(r){ if (tier(r.id)>0){ rooms++; stf += staffN(r.id); } });
+  var el = document.getElementById("stat"); if (el) el.textContent = "Комнат: "+rooms+" из "+ROOMS.length+" · сотрудников: "+stf+" · доход: "+fmt(incomeH())+" ₽ в час";
+  var inc = document.getElementById("inc"); if (inc) inc.textContent = "Клиника приносит "+fmt(incomeH())+" ₽ в час, копится до "+CAP_H+" часов";
+}
+function sheet(){
+  var el = document.getElementById("sheet"); if (!el) return; var l = levelOf(S.xp);
+  var chips = ROOMS.map(function(r){ var t = tier(r.id); return '<button class="chip" data-sel="'+r.id+'" aria-pressed="'+(SEL===r.id)+'">'+r.ab+(t?' '+t:'')+'</button>'; }).join("");
+  var h = '<div class="chips" id="rchips">'+chips+'</div>';
+  if (!SEL){ el.innerHTML = h+'<p class="rline">Нажмите на комнату в 3D или выберите её выше. Перетаскивание двигает карту, щипок меняет масштаб, два пальца вращают.</p>'; return; }
+  var r = roomOf(SEL), t = tier(SEL), n = staffN(SEL), locked = t===0 && l < r.min;
+  var pips = [0,1,2].map(function(i){ return '<span class="pip '+(i<t?'on':'')+'"></span>'; }).join("");
+  h += '<div class="rhead"><h3>'+esc(r.name)+'</h3><div class="pips">'+pips+'</div></div>';
+  if (t>0) h += '<p class="rline">'+esc(r.tiers[t-1][0])+' · '+fmt(r.inc[t-1]*(1+.15*n))+' ₽ в час'+(r.perk ? ' · +'+r.perk.v[t-1]+' '+r.perk.txt : '')+'</p>';
+  else h += '<p class="rline">'+(locked ? 'Откроется на уровне '+r.min+' ('+TITLES[r.min-1]+')' : 'Площадка свободна, можно строить')+'</p>';
+  if (t>0){
+    var dots = [0,1,2].map(function(i){ return '<span class="pip '+(i<n?'on':'')+'" style="width:20px"></span>'; }).join("");
+    var cst = hireCost(r), can = n < t && S.money >= cst;
+    h += '<div class="rhead"><p class="rline">Персонал: '+n+' из '+t+' · '+esc(LAY[SEL].role)+' даёт +15% к доходу</p><div class="pips">'+dots+'</div></div>';
+    h += n >= t ? '<button class="btn ghost small" disabled>'+(t<3 ? 'Улучшите оборудование, чтобы нанять ещё' : 'Штат укомплектован')+'</button>'
+               : '<button class="btn small" data-hire="'+SEL+'"'+(can?'':' disabled')+'>Нанять: '+esc(LAY[SEL].role)+' · '+fmt(cst)+' ₽</button>';
+  }
+  if (t>=3) h += '<button class="btn ghost small" disabled>Максимальное оснащение</button>';
+  else if (locked) h += '<button class="btn ghost small" disabled>Нужен уровень '+r.min+'</button>';
+  else { var nx = r.tiers[t]; h += '<button class="btn small" data-buy="'+SEL+'"'+(S.money >= nx[1] ? '' : ' disabled')+'>'+(t===0?'Построить':'Купить оборудование')+': '+esc(nx[0])+' · '+fmt(nx[1])+' ₽</button>'; }
+  el.innerHTML = h;
+}
+function afterChange(id){
+  var tp = document.querySelector(".top"); if (tp) tp.outerHTML = topBar();
+  if (T3) T3.refresh(id);
+  var f = document.getElementById("fl"); if (f) f.textContent = flash;
+  sheet(); stats();
+}
+function settle(){ var p = pending(); S.money += p; S.last = Date.now(); }
+function buyRoom(id){
+  var r = roomOf(id), t = tier(id), nx = r.tiers[t]; if (!nx || S.money < nx[1] || (t===0 && levelOf(S.xp) < r.min)) return;
+  settle(); S.money -= nx[1]; S.rooms[id] = t+1; save();
+  flash = (t===0 ? "Построено: "+r.name+" — " : "Установлено: ")+nx[0]; afterChange(id);
+}
+function hireStaff(id){
+  var r = roomOf(id), n = staffN(id), c = hireCost(r); if (!tier(id) || n >= tier(id) || S.money < c) return;
+  settle(); S.money -= c; S.staff = S.staff || {}; S.staff[id] = n+1; save();
+  flash = "Нанят сотрудник: "+LAY[id].role+" · доход комнаты +15%"; afterChange(id);
+}
 function clinic(){
-  var l = levelOf(S.xp);
-  var pts = 0, stf = 0; ROOMS.forEach(function(r){ var t = tier(r.id); if (t>0){ pts += t+1; stf += t>1 ? 2 : 1; } });
-  var cards = ROOMS.map(function(r){
-    var t = tier(r.id), locked = t===0 && l < r.min;
-    var pips = [0,1,2].map(function(i){ return '<span class="pip '+(i<t?'on':'')+'"></span>'; }).join("");
-    var lines = "";
-    if (t>0) lines += '<p class="rline">'+esc(r.tiers[t-1][0])+' · '+r.inc[t-1]+' ₽ в час'+(r.perk ? ' · +'+r.perk.v[t-1]+' '+r.perk.txt : '')+'</p>';
-    else lines += '<p class="rline">'+(locked ? 'Откроется на уровне '+r.min+' ('+TITLES[r.min-1]+')' : 'Не построена')+'</p>';
-    var btn = "";
-    if (t>=3) btn = '<button class="btn ghost small" disabled>Максимальное оснащение</button>';
-    else if (locked) btn = '<button class="btn ghost small" disabled>Нужен уровень '+r.min+'</button>';
-    else {
-      var nx = r.tiers[t], can = S.money >= nx[1];
-      btn = '<button class="btn small" data-buy="'+r.id+'"'+(can?'':' disabled')+'>'+(t===0?'Построить':'Улучшить')+': '+esc(nx[0])+' · '+fmt(nx[1])+' ₽</button>';
-    }
-    return '<div class="room '+(locked?'locked':'')+'"><div class="rhead"><h3>'+esc(r.name)+'</h3><div class="pips">'+pips+'</div></div>'+lines+btn+'</div>';
-  }).join("");
+  S.staff = S.staff || {};
   shell(
-    '<div class="nav" id="mode" style="grid-template-columns:repeat(2,1fr)"><button data-m="2d" aria-current="'+(clinicMode==="2d")+'">Схема</button><button data-m="3d" aria-current="'+(clinicMode==="3d")+'">3D</button></div>' +
-    '<div class="panel art">'+(clinicMode==="3d" ? '<div id="stage3d"></div>' : clinicArt())+'<p class="rline" id="event" style="padding:0 8px">'+esc(pickEvent())+'</p><p class="note" style="padding:0 8px 4px">Сейчас в клинике: пациентов '+pts+', сотрудников '+stf+(clinicMode==="3d" ? ' · вращайте здание пальцем, масштаб щипком' : '')+'</p></div>' +
-    '<div class="panel"><div class="collect"><div><p class="eyebrow">Выручка за время простоя</p><div class="big" id="pend">'+fmt(pending())+' ₽</div><p class="note">Клиника приносит '+fmt(incomeH())+' ₽ в час, копится до '+CAP_H+' часов</p></div>' +
-    '<button class="btn small" id="collect" style="width:auto">Забрать</button></div>' +
-    (flash ? '<p class="msg" style="color:var(--good)">'+flash+'</p>' : '') + '</div>' +
-    '<div class="panel"><p class="eyebrow">Название клиники</p>' +
-    '<input type="text" id="cname" maxlength="32" value="'+esc(S.name)+'" aria-label="Название клиники"></div>' +
-    '<div class="rooms" id="rooms">'+cards+'</div>'
+    '<div class="panel art"><div class="stage" id="stage3d"></div><p class="rline" id="event" style="padding:8px 8px 0">'+esc(pickEvent())+'</p><p class="note" id="stat" style="padding:0 8px 4px"></p></div>' +
+    '<div class="panel" id="sheet"></div>' +
+    '<div class="panel"><div class="collect"><div><p class="eyebrow">Выручка за время простоя</p><div class="big" id="pend">'+fmt(pending())+' ₽</div><p class="note" id="inc"></p></div>' +
+    '<button class="btn small" id="collect" style="width:auto">Забрать</button></div><p class="msg" id="fl" style="color:var(--good)">'+esc(flash||"")+'</p></div>' +
+    '<div class="panel"><p class="eyebrow">Название клиники</p><input type="text" id="cname" maxlength="32" value="'+esc(S.name)+'" aria-label="Название клиники"></div>'
   );
   ticker = setInterval(function(){ var el = document.getElementById("pend"); if (el) el.textContent = fmt(pending())+" ₽"; var ev = document.getElementById("event"); if (ev) ev.textContent = pickEvent(); }, 4500);
-  document.getElementById("mode").onclick = function(e){ var m = e.target.getAttribute && e.target.getAttribute("data-m"); if (m && m !== clinicMode){ clinicMode = m; clinic(); } };
-  if (clinicMode === "3d") init3d(document.getElementById("stage3d"));
+  sheet(); stats(); init3d(document.getElementById("stage3d"));
+  document.getElementById("sheet").onclick = function(e){
+    var a = e.target.getAttribute && e.target.getAttribute.bind(e.target); if (!a) return;
+    if (a("data-sel")){ SEL = a("data-sel"); if (T3){ T3.mark(SEL); T3.focus(SEL); } sheet(); }
+    else if (a("data-buy")) buyRoom(a("data-buy")); else if (a("data-hire")) hireStaff(a("data-hire"));
+  };
   document.getElementById("collect").onclick = function(){
-    var p = pending();
-    if (p>0){ S.money += p; S.last = Date.now(); save(); flash = "Получено "+fmt(p)+" ₽"; } else { flash = "Пока нечего забирать"; }
-    clinic();
+    var p = pending(); if (p>0){ S.money += p; S.last = Date.now(); save(); flash = "Получено "+fmt(p)+" ₽"; } else flash = "Пока нечего забирать";
+    var tp = document.querySelector(".top"); if (tp) tp.outerHTML = topBar(); document.getElementById("fl").textContent = flash; document.getElementById("pend").textContent = fmt(pending())+" ₽"; sheet();
   };
-  document.getElementById("cname").onchange = function(e){ var v = e.target.value.trim(); if (v){ S.name = v.slice(0,32); save(); document.querySelector(".eyebrow").textContent = S.name; } };
-  document.getElementById("rooms").onclick = function(e){
-    var id = e.target.getAttribute && e.target.getAttribute("data-buy"); if (!id) return;
-    var r = ROOMS.filter(function(x){ return x.id===id; })[0], t = tier(id), nx = r.tiers[t];
-    if (!nx || S.money < nx[1] || (t===0 && l < r.min)) return;
-    var p = pending(); S.money += p; S.last = Date.now();
-    S.money -= nx[1]; S.rooms[id] = t+1; save();
-    flash = (t===0 ? "Построено: " : "Установлено: ") + (t===0 ? r.name+" — " : "")+nx[0];
-    clinic();
-  };
+  document.getElementById("cname").onchange = function(e){ var v = e.target.value.trim(); if (v){ S.name = v.slice(0,32); save(); var b = document.querySelector(".brand p"); if (b) b.textContent = S.name; } };
 }
 
 /* ===== Банк вопросов: импорт своих ===== */
