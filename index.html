@@ -291,6 +291,24 @@ h3 { font-size: 18px; font-weight: 600; }
 .qn.done { background: var(--accent); }
 .timer, .score, .money { font-family: var(--font-mono); }
 .up { border-radius: 8px; border-left: 5px solid var(--gold); }
+
+/* Telegram Mini App: полноэкранная раскладка */
+html, body {
+  width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+}
+body {
+  min-height: 100dvh;
+  padding-top: max(12px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+}
+.wrap {
+  width: 100%;
+  max-width: 760px;
+  min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  margin-inline: auto;
+}
 </style>
 
 <div class="wrap" id="app"></div>
@@ -348,9 +366,39 @@ function tgColors(){
     if (TG.setBottomBarColor) TG.setBottomBarColor(c);
   } catch(e){}
 }
+function tgRequestFullScreen(){
+  if (!TG) return;
+  try {
+    if (TG.isVersionAtLeast && TG.isVersionAtLeast("8.0") && TG.requestFullscreen) {
+      TG.requestFullscreen();
+    } else if (TG.expand) {
+      // Старые версии Telegram поддерживают разворачивание Mini App, но не fullscreen API.
+      TG.expand();
+    }
+  } catch(e) {
+    try { if (TG.expand) TG.expand(); } catch(e2){}
+  }
+}
 function tgInit(){
   if (!TG) return;
-  try { TG.ready(); TG.expand(); if (TG.disableVerticalSwipes) TG.disableVerticalSwipes(); } catch(e){}
+  try {
+    TG.ready();
+    TG.expand();
+    if (TG.disableVerticalSwipes) TG.disableVerticalSwipes();
+  } catch(e){}
+  // Пытаемся включить настоящий fullscreen в поддерживаемых версиях Telegram.
+  tgRequestFullScreen();
+  // Повторяем запрос при первом действии пользователя, если WebView заблокировал автозапрос.
+  var tgFullscreenRequested = false;
+  function requestOnFirstInteraction(){
+    if (tgFullscreenRequested) return;
+    tgFullscreenRequested = true;
+    tgRequestFullScreen();
+    document.removeEventListener("pointerdown", requestOnFirstInteraction);
+    document.removeEventListener("touchstart", requestOnFirstInteraction);
+  }
+  document.addEventListener("pointerdown", requestOnFirstInteraction, { once: true });
+  document.addEventListener("touchstart", requestOnFirstInteraction, { once: true, passive: true });
   tgColors();
   try {
     var mq = window.matchMedia("(prefers-color-scheme: dark)");
