@@ -325,6 +325,21 @@ body {
   min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   margin-inline: auto;
 }
+
+
+/* FINAL OVERRIDE: Android Telegram overlays its controls over the Mini App content.
+   This must be after the general body padding rules so it is not overridden. */
+html.tg-android body {
+  padding-top: 112px !important;
+  padding-block-start: 112px !important;
+}
+@media (max-width: 480px) {
+  html.tg-android body {
+    padding-top: 112px !important;
+    padding-block-start: 112px !important;
+  }
+}
+
 </style>
 
 <div class="wrap" id="app"></div>
