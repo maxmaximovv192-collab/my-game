@@ -26,7 +26,19 @@ html.tg-android body {
 .study-card .study-expl { padding:10px 12px; border-left:3px solid var(--accent); background:var(--bg); font-size:14px; overflow-wrap:anywhere; }
 .study-actions { display:flex; flex-direction:column; gap:8px; }
 .study-sticky { position:sticky; top:8px; z-index:5; background:var(--surface); border:1px solid var(--line); padding:10px; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
-</style></head><body>
+</style><style id="block-touch-navigation-style">
+/* Не подсвечивать ещё не выбранные ответы красным на iOS и Android */
+.ui-redesign #bopts .opt:not(.good):not(.bad):hover:not(:disabled),
+.ui-redesign #opts .opt:not(.good):not(.bad):hover:not(:disabled) {
+  background: #fcf7f0;
+  border-color: #c3b3a9;
+}
+.ui-redesign #bopts .opt:not(.good):not(.bad):focus:not(:focus-visible),
+.ui-redesign #opts .opt:not(.good):not(.bad):focus:not(:focus-visible) {
+  outline: none;
+}
+</style>
+</head><body>
 <title>Ночное дежурство</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
@@ -938,7 +950,7 @@ function hud(){
 function question(){
   stop3d();
   var q = st.qs[st.i];
-  st.opts = shuffle(q.a); st.answered = false; st.t0 = Date.now();
+  st.opts = shuffle(q.a); st.answered = false; st.answeredAt = 0; st.transitioning = false; st.t0 = Date.now();
   var o = st.opts.map(function(t,idx){ return '<button class="opt" data-i="'+idx+'"><span class="k">'+(idx+1)+'</span><span>'+esc(t)+'</span></button>'; }).join("");
   var canHint = st.hints > 0 && st.opts.length >= 3;
   app.innerHTML = hud() +
@@ -971,7 +983,7 @@ function tick(){
 }
 function answer(idx){
   if (st.answered) return;
-  st.answered = true; clearInterval(timer);
+  st.answered = true; st.answeredAt = Date.now(); clearInterval(timer);
   var q = st.qs[st.i], right = q.a[0];
   var secs = (Date.now() - st.t0)/1000;
   var isOk = idx>=0 && st.opts[idx] === right;
@@ -993,12 +1005,41 @@ function answer(idx){
     '<div class="fb '+(isOk?'good':'bad')+'"><b>'+head+'</b>'+body+'</div>' +
     '<button class="btn" id="next" style="margin-top:12px">'+((over||last)?'Итоги смены':'Следующий вопрос')+'</button>';
   var n = document.getElementById("next");
-  n.onclick = function(){ if (over||last) finish(); else { st.i++; question(); } };
+  n.onclick = shiftAdvance;
   // Автофокус прокручивал Telegram WebView вниз к пояснению после ответа.
   var h = ""; for (var k=0;k<st.maxLives;k++) h += heart(k >= st.lives);
   document.getElementById("lives").innerHTML = h;
   document.getElementById("score").textContent = "+"+fmt(st.earned)+" ₽";
 }
+function shiftAdvance(){
+  if (!st || !st.answered || st.transitioning || !document.getElementById("next")) return;
+  st.transitioning = true;
+  if (st.lives <= 0 || st.i >= st.qs.length-1) finish();
+  else { st.i++; question(); }
+}
+var shiftTouch = null, shiftLastSwipe = 0;
+app.addEventListener("touchstart", function(e){
+  if (!st || !st.answered || !document.getElementById("next") || e.touches.length !== 1){
+    shiftTouch = null; return;
+  }
+  var t = e.touches[0];
+  shiftTouch = {x:t.clientX, y:t.clientY};
+}, {passive:true});
+app.addEventListener("touchend", function(e){
+  if (!shiftTouch || !st || !st.answered || !document.getElementById("next")){ shiftTouch = null; return; }
+  var t = e.changedTouches[0], dx = t.clientX - shiftTouch.x, dy = t.clientY - shiftTouch.y;
+  shiftTouch = null;
+  if (Math.abs(dx) >= 65 && Math.abs(dx) > Math.abs(dy)*1.4 && Date.now()-st.answeredAt > 250){
+    shiftLastSwipe = Date.now();
+    shiftAdvance();
+  }
+}, {passive:true});
+app.addEventListener("click", function(e){
+  if (!st || !st.answered || !document.getElementById("next")) return;
+  if (Date.now()-st.answeredAt < 330 || Date.now()-shiftLastSwipe < 650) return;
+  if (e.target.closest("#next, #hint, a, input, textarea, select")) return;
+  shiftAdvance();
+});
 function finish(){
   clearInterval(timer);
   var total = st.i + 1;
@@ -1208,7 +1249,7 @@ function startBlock(b, fresh){
 function bQuestion(){
   stop3d();
   var q = bk.qs[bk.i];
-  bk.opts = shuffle(q.a); bk.answered = false;
+  bk.opts = shuffle(q.a); bk.answered = false; bk.answeredAt = 0; bk.transitioning = false;
   var o = bk.opts.map(function(t,idx){ return '<button class="opt" data-i="'+idx+'"><span class="k">'+(idx+1)+'</span><span>'+esc(t)+'</span></button>'; }).join("");
   app.innerHTML =
     '<div class="hud"><span class="eyebrow">Блок '+(bk.b+1)+' · верно '+bk.ok+'</span><button class="btn ghost small" id="bexit" style="width:auto">Выйти</button></div>' +
@@ -1221,7 +1262,7 @@ function bQuestion(){
 }
 function bAnswer(idx){
   if (bk.answered) return;
-  bk.answered = true;
+  bk.answered = true; bk.answeredAt = Date.now();
   var q = bk.qs[bk.i], right = q.a[0], isOk = bk.opts[idx] === right;
   if (isOk) bk.ok++; else bk.wrong.push(bk.i);
   var last = bk.i >= bk.qs.length - 1;
@@ -1231,9 +1272,42 @@ function bAnswer(idx){
     '<div class="fb '+(isOk?'good':'bad')+'"><b>'+(isOk ? 'Верно' : 'Неверно')+'</b>'+(isOk ? '' : '<p>Правильный ответ: '+esc(right)+'</p>')+(q.e ? '<p>'+esc(q.e)+'</p>' : '')+'</div>' +
     '<button class="btn" id="bnext" style="margin-top:12px">'+(last ? 'Итоги блока' : 'Следующий вопрос')+'</button>';
   var n = document.getElementById("bnext");
-  n.onclick = function(){ if (last) bFinish(); else { bk.i++; bQuestion(); } };
-  n.focus();
+  n.onclick = bAdvance;
+  // На телефоне автофокус кнопки иногда прокручивает экран
+  // и оставляет подсветку предыдущего интерактивного элемента.
 }
+function bAdvance(){
+  if (!bk || !bk.active || !bk.answered || bk.transitioning) return;
+  bk.transitioning = true;
+  if (bk.i >= bk.qs.length - 1) bFinish();
+  else { bk.i++; bQuestion(); }
+}
+// Свайп влево или вправо после ответа переключает вопрос.
+// Вертикальный жест остаётся обычной прокруткой пояснения.
+var bTouch = null, bLastSwipe = 0;
+app.addEventListener("touchstart", function(e){
+  if (!bk || !bk.active || !bk.answered || !document.getElementById("bnext") || e.touches.length !== 1){
+    bTouch = null; return;
+  }
+  var t = e.touches[0];
+  bTouch = {x:t.clientX, y:t.clientY, at:Date.now()};
+}, {passive:true});
+app.addEventListener("touchend", function(e){
+  if (!bTouch || !bk || !bk.active || !bk.answered || !document.getElementById("bnext")){ bTouch = null; return; }
+  var t = e.changedTouches[0], dx = t.clientX - bTouch.x, dy = t.clientY - bTouch.y;
+  bTouch = null;
+  if (Math.abs(dx) >= 65 && Math.abs(dx) > Math.abs(dy)*1.4 && Date.now()-bk.answeredAt > 250){
+    bLastSwipe = Date.now();
+    bAdvance();
+  }
+}, {passive:true});
+// Касание свободной области экрана или текста пояснения после ответа.
+app.addEventListener("click", function(e){
+  if (!bk || !bk.active || !bk.answered || !document.getElementById("bnext")) return;
+  if (Date.now() - bk.answeredAt < 330 || Date.now() - bLastSwipe < 650) return;
+  if (e.target.closest("#bnext, #bexit, a, input, textarea, select")) return;
+  bAdvance();
+});
 function bFinish(){
   bk.active = false;
   var len = bk.qs.length, pct = Math.round(bk.ok/len*100), best = bk.best === null ? pct : Math.max(bk.best, pct);
