@@ -14,6 +14,18 @@ html.tg-android body {
   padding-top: max(88px, var(--tg-content-safe-area-inset-top, 0px));
 }
 
+</style><style>
+/* Подготовка к блоку: полный список с отмеченными верными ответами */
+.study-list { display:flex; flex-direction:column; gap:12px; }
+.study-card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+.study-card .study-number { font:600 12px var(--font-mono); color:var(--muted-solid); }
+.study-card .study-question { font:700 18px/1.35 var(--font-body); overflow-wrap:anywhere; }
+.study-card .study-answers { display:flex; flex-direction:column; gap:6px; margin:0; padding:0; list-style:none; }
+.study-card .study-answer { padding:9px 11px; background:var(--bg); border:1px solid var(--line); border-radius:8px; font-size:14px; overflow-wrap:anywhere; }
+.study-card .study-answer.correct { background:var(--good-bg); border-color:var(--good); font-weight:600; }
+.study-card .study-expl { padding:10px 12px; border-left:3px solid var(--accent); background:var(--bg); font-size:14px; overflow-wrap:anywhere; }
+.study-actions { display:flex; flex-direction:column; gap:8px; }
+.study-sticky { position:sticky; top:8px; z-index:5; background:var(--surface); border:1px solid var(--line); padding:10px; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
 </style></head><body>
 <title>Ночное дежурство</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1125,6 +1137,7 @@ document.addEventListener("keydown", function(e){
 });
 
 /* ===== Блоки по 100 вопросов ===== */
+
 var BLOCK_N = 100;
 var bk = null;
 function blockCount(){ return Math.ceil(pool().length / BLOCK_N); }
@@ -1149,12 +1162,41 @@ function blockIntro(b){
   var inProg = inf.pos > 0 && inf.pos < qs.length;
   var status = (inf.best !== null ? 'Лучший результат: '+inf.best+'%. ' : '') + (inProg ? 'Остановились на вопросе '+(inf.pos+1)+' из '+qs.length+'.' : (inf.best === null ? 'Ещё не проходили.' : ''));
   shell('<div class="panel"><p class="eyebrow">Блок '+(b+1)+' из '+blockCount()+'</p><h3>Вопросы '+from+'–'+to+'</h3><p class="note">'+status+'</p>' +
-    '<button class="btn" id="bgo">'+(inProg ? 'Продолжить с вопроса '+(inf.pos+1) : 'Начать блок')+'</button>' +
+    '<button class="btn" id="bstudy">Посмотреть все вопросы и ответы</button>' +
+    '<button class="btn ghost" id="bgo">'+(inProg ? 'Продолжить с вопроса '+(inf.pos+1) : 'Начать блок')+'</button>' +
     ((inProg || inf.best !== null) && inProg ? '<button class="btn ghost" id="bnew">Начать сначала</button>' : (inf.best !== null ? '<button class="btn ghost" id="bnew">Пройти заново</button>' : '')) +
     '<button class="btn ghost" id="bback">К списку блоков</button></div>');
+  document.getElementById("bstudy").onclick = function(){ blockStudy(b); };
   document.getElementById("bgo").onclick = function(){ startBlock(b, !inProg); };
   var nw = document.getElementById("bnew"); if (nw) nw.onclick = function(){ startBlock(b, true); };
   document.getElementById("bback").onclick = function(){ view = "blocks"; render(); };
+}
+function blockStudy(b){
+  var qs = blockQs(b), inf = bInfo(b), inProg = inf.pos > 0 && inf.pos < qs.length;
+  // Просмотр не меняет статистику, порядок заданий или прогресс решения.
+  var cards = qs.map(function(q, i){
+    var opts = q.a.map(function(a, j){
+      return '<li class="study-answer'+(j === 0 ? ' correct' : '')+'">'+(j === 0 ? '✓ ' : '○ ')+esc(a)+'</li>';
+    }).join('');
+    return '<article class="study-card" id="study-q-'+i+'">'+
+      '<span class="study-number">Вопрос '+(i+1)+' из '+qs.length+(q.id != null ? ' · № '+esc(q.id) : '')+'</span>'+
+      '<h3 class="study-question">'+esc(q.q)+'</h3>'+
+      '<ul class="study-answers">'+opts+'</ul>'+
+      (q.e ? '<div class="study-expl"><b>Пояснение</b><p>'+esc(q.e)+'</p></div>' : '')+
+      '</article>';
+  }).join('');
+  shell('<div class="panel"><p class="eyebrow">Подготовка · Блок '+(b+1)+' из '+blockCount()+'</p>'+
+    '<h2>Все '+qs.length+' вопросов с ответами</h2>'+
+    '<p class="note">Зелёным выделен правильный ответ. Просмотр не влияет на результаты блока.</p>'+
+    '<div class="study-actions">'+
+    '<button class="btn" id="studyStart">'+(inProg ? 'Продолжить решение' : 'Начать решение блока')+'</button>'+
+    '<button class="btn ghost" id="studyBack">Назад к блоку</button></div></div>'+
+    '<div class="study-list">'+cards+'</div>'+
+    '<div class="study-sticky"><button class="btn" id="studyBottomStart">'+(inProg ? 'Продолжить решение' : 'Начать решение блока')+'</button></div>');
+  document.getElementById('studyStart').onclick = function(){ startBlock(b, !inProg); };
+  document.getElementById('studyBottomStart').onclick = function(){ startBlock(b, !inProg); };
+  document.getElementById('studyBack').onclick = function(){ blockIntro(b); };
+  window.scrollTo(0,0);
 }
 function startBlock(b, fresh){
   var qs = blockQs(b), inf = bInfo(b);
@@ -1206,7 +1248,7 @@ function bFinish(){
     (hasNext ? '<button class="btn" id="bnextblk">Следующий блок</button>' : '') +
     '<button class="btn ghost" id="bagain">Пройти заново</button><button class="btn ghost" id="blist">К списку блоков</button>');
   window.scrollTo(0,0);
-  var nb = document.getElementById("bnextblk"); if (nb) nb.onclick = function(){ startBlock(b+1, true); };
+  var nb = document.getElementById("bnextblk"); if (nb) nb.onclick = function(){ blockIntro(b+1); };
   document.getElementById("bagain").onclick = function(){ startBlock(b, true); };
   document.getElementById("blist").onclick = function(){ view = "blocks"; render(); };
 }
